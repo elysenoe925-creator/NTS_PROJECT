@@ -11,6 +11,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showForm, setShowForm] = useState(false)
   const { setCurrentStore } = useStore()
   const { login } = useAuth()
 
@@ -40,7 +41,7 @@ export default function Login() {
     <div className="min-h-screen bg-gradient flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         {/* Hero Section */}
-        <div className="text-center mb-12">
+        <div className={`text-center mb-12 transition-all duration-500 ${showForm ? ' hidden transform -translate-y-4 pointer-events-none' : 'opacity-100 transform translate-y-0'}`}>
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
             NTSOA <span className="text-indigo-600">GSM</span>
           </h1>
@@ -48,7 +49,7 @@ export default function Login() {
             Système de Gestion de Stock et Magasin - Optimisez votre inventaire,
             suivez vos ventes et prenez des décisions éclairées pour votre entreprise.
           </p>
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500 mb-8">
             <div className="flex items-center">
               <svg className="w-5 h-5 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -68,10 +69,16 @@ export default function Login() {
               Analyses et rapports détaillés
             </div>
           </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+          >
+            Accèder à l'espace de travail
+          </button>
         </div>
 
         {/* Login Form */}
-        <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+        <div className={`max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 transition-all duration-500 ${showForm ? 'opacity-100 transform translate-y-0' : 'hidden transform translate-y-4 pointer-events-none'}`}>
             <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Connexion</h2>
 
             {error && (
