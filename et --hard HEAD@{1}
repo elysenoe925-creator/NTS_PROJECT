@@ -1,0 +1,26 @@
+[33ma9ea418[m[33m ([m[1;36mHEAD[m[33m, [m[1;31morigin/main[m[33m)[m HEAD@{0}: pull origin main --rebase (start): checkout a9ea418fba4c0fb8b0dfa3213f751ca0759e7dd5
+[33m4d7e359[m[33m ([m[1;32mmain[m[33m)[m HEAD@{1}: commit: it
+[33m75b03e0[m HEAD@{2}: Branch: renamed refs/heads/main to refs/heads/main
+[33m75b03e0[m HEAD@{4}: commit: first commit
+[33m804896e[m HEAD@{5}: Branch: renamed refs/heads/main to refs/heads/main
+[33m804896e[m HEAD@{7}: Branch: renamed refs/heads/main to refs/heads/main
+[33m804896e[m HEAD@{9}: commit: first commit
+[33m9714b45[m HEAD@{10}: Branch: renamed refs/heads/main to refs/heads/main
+[33m9714b45[m HEAD@{12}: Branch: renamed refs/heads/main to refs/heads/main
+[33m9714b45[m HEAD@{14}: commit: vf
+[33m2f51945[m HEAD@{15}: commit: feat: Fix arrivals filter logic and add dynamic store selector per route
+[33m9f004ec[m HEAD@{16}: Branch: renamed refs/heads/main to refs/heads/main
+[33m9f004ec[m HEAD@{18}: commit: v1
+[33m97594b8[m HEAD@{19}: Branch: renamed refs/heads/gsm to refs/heads/main
+[33m97594b8[m HEAD@{21}: commit: first commit
+[33m68c84ad[m HEAD@{22}: checkout: moving from main to gsm
+[33m68c84ad[m HEAD@{23}: Branch: renamed refs/heads/main to refs/heads/main
+[33m68c84ad[m HEAD@{25}: commit: first commit
+[33m46c38e1[m HEAD@{26}: Branch: renamed refs/heads/main to refs/heads/main
+[33m46c38e1[m HEAD@{28}: commit: first commit
+[33m2822ff9[m HEAD@{29}: Branch: renamed refs/heads/main to refs/heads/main
+[33m2822ff9[m HEAD@{31}: commit: first commit
+[33m83ac78e[m HEAD@{32}: Branch: renamed refs/heads/main to refs/heads/main
+[33m83ac78e[m HEAD@{34}: Branch: renamed refs/heads/main to refs/heads/main
+[33m83ac78e[m HEAD@{36}: commit: docs: ajout statut git - tous changements committé le 25 jan
+[33m476f85e[m HEAD@{37}: commit (initial): websocket ok arrivage ok stock independant cump ok

@@ -1,0 +1,128 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id          Int     @id @default(autoincrement())
+  username    String  @unique
+  displayName String
+  passwordHash String
+  role        String
+  store       String
+  actionLogs  ActionLog[]
+  arrivals    Arrival[]
+  orders      Order[]
+}
+
+model Product {
+  id       Int     @id @default(autoincrement())
+  sku      String  @unique
+  name     String
+  model    String?
+  compatibleModels String?
+  cost     Float?
+  margin   Float?
+  price    Float?
+  location String?
+  category String?
+  supplier String?
+  alertThreshold Int @default(5)
+  stocks   Stock[]
+  sales    Sale[]
+  arrivals ArrivalItem[]
+  orderItems OrderItem[]
+}
+
+model Stock {
+  id        Int     @id @default(autoincrement())
+  product   Product @relation(fields: [productId], references: [id])
+  productId Int
+  store     String
+  qty       Int     @default(0)
+  cost      Float?  // Prix d'achat par boutique
+  margin    Float?  // Marge bénéficiaire (%) par boutique
+  reorderRequested Boolean @default(false)
+  @@unique([productId, store])
+}
+
+model Sale {
+  id        Int      @id @default(autoincrement())
+  product   Product  @relation(fields: [productId], references: [id])
+  productId Int
+  qty       Int
+  total     Float
+  client    String
+  date      DateTime @default(now())
+  store     String
+}
+
+model ActionLog {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  action      String
+  description String
+  timestamp   DateTime @default(now())
+  store       String?
+}
+
+model Arrival {
+  id          Int     @id @default(autoincrement())
+  referenceNumber String @unique
+  supplier    String
+  arrivalDate DateTime @default(now())
+  receivedBy  Int
+  user        User    @relation(fields: [receivedBy], references: [id])
+  status      String  @default("pending") // pending, confirmed, cancelled
+  notes       String?
+  store       String
+  items       ArrivalItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ArrivalItem {
+  id          Int     @id @default(autoincrement())
+  arrival     Arrival @relation(fields: [arrivalId], references: [id], onDelete: Cascade)
+  arrivalId   Int
+  product     Product @relation(fields: [productId], references: [id])
+  productId   Int
+  qtyReceived Int
+  costPrice   Float   // Prix d'achat
+  notes       String?
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  referenceNumber String      @unique
+  createdBy       Int
+  user            User        @relation(fields: [createdBy], references: [id])
+  status          String      @default("draft") // draft, pending, approved, rejected, confirmed, shipped, delivered, cancelled
+  store           String
+  supplier        String?
+  totalAmount     Float       @default(0)
+  notes           String?
+  deliveryDate    DateTime?
+  targetDate      DateTime?
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id          Int     @id @default(autoincrement())
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId     Int
+  product     Product @relation(fields: [productId], references: [id])
+  productId   Int
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+  notes       String?
+}
+

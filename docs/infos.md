@@ -1,0 +1,1 @@
+SKU : est un code unique(généralement composé de lettres et de chiffres)
