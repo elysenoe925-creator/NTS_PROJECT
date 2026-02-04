@@ -27,7 +27,7 @@ const io = new Server(server, {
       'http://localhost:5173',
       'http://localhost:4000',
       'https://localhost:5173',
-      'https://nts-project.onrender.com',
+      'https://nts-project.vercel.app',
       process.env.FRONTEND_URL || ''
     ].filter(Boolean),
     credentials: true,
@@ -42,7 +42,7 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:4000',
     'https://localhost:5173',
-    'https://nts-project.onrender.com',
+    'https://nts-project.vercel.app',
     process.env.FRONTEND_URL || ''
   ].filter(Boolean),
   credentials: true,
