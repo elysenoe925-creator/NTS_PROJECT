@@ -1086,6 +1086,8 @@ app.get('/api/arrivals', auth, async (req, res) => {
         productId: i.productId,
         sku: i.product?.sku,
         productName: i.product?.name,
+        model: i.product?.model,
+        compatibleModels: i.product?.compatibleModels,
         qtyReceived: i.qtyReceived,
         costPrice: i.costPrice,
         notes: i.notes
@@ -1129,6 +1131,8 @@ app.get('/api/arrivals/:id', auth, async (req, res) => {
         productId: i.productId,
         sku: i.product?.sku,
         productName: i.product?.name,
+        model: i.product?.model,
+        compatibleModels: i.product?.compatibleModels,
         qtyReceived: i.qtyReceived,
         costPrice: i.costPrice,
         notes: i.notes
@@ -1205,6 +1209,8 @@ app.post('/api/arrivals', auth, async (req, res) => {
         productId: i.productId,
         sku: i.product?.sku,
         productName: i.product?.name,
+        model: i.product?.model,
+        compatibleModels: i.product?.compatibleModels,
         qtyReceived: i.qtyReceived,
         costPrice: i.costPrice,
         notes: i.notes

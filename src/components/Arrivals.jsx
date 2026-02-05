@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { AlertCircle, Check, X, Plus, Edit2, Trash2, Package, TrendingDown } from 'lucide-react'
+import { AlertCircle, Check, X, Plus, Edit2, Trash2, Package, TrendingDown, Download, Search, FileText, CheckCircle2 } from 'lucide-react'
 import { getProducts } from '../lib/productsStore'
 import { getToken } from '../lib/authStore'
 import { logAction } from '../lib/actionLogger'
@@ -19,6 +19,7 @@ export default function Arrivals() {
   const [editingId, setEditingId] = useState(null)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('all') // 'all', 'pending', 'confirmed', 'cancelled'
+  const [searchTerm, setSearchTerm] = useState('')
 
   const [form, setForm] = useState({
     referenceNumber: '',
@@ -102,6 +103,33 @@ export default function Arrivals() {
     }))
   }
 
+  function handleExportCSV() {
+    const delimiter = ';'
+    const headers = ['Référence', 'Fournisseur', 'Date', 'Statut', 'Articles', 'Modèles', 'Total']
+    const rows = arrivals.map(a => [
+      a.referenceNumber,
+      a.supplier,
+      new Date(a.arrivalDate).toLocaleDateString('fr-FR'),
+      a.status === 'pending' ? 'En Attente' : a.status === 'confirmed' ? 'Confirmé' : 'Annulé',
+      a.items.map(i => `${i.productName} (${i.qtyReceived})`).join(', '),
+      a.items.map(i => `${i.model || ''} ${i.compatibleModels ? `[${i.compatibleModels}]` : ''}`).join(' | '),
+      a.items.reduce((sum, i) => sum + (i.qtyReceived * i.costPrice), 0).toFixed(2) + ' Ar'
+    ])
+
+    const esc = v => (v == null ? '' : String(v).replace(/"/g, '""'))
+    const csvContent = '\uFEFF' + [headers.join(delimiter)].concat(rows.map(r => r.map(c => `"${esc(c)}"`).join(delimiter))).join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `arrivages_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
 
@@ -153,7 +181,7 @@ export default function Arrivals() {
 
       const data = await res.json()
 
-      await logAction('ARRIVAL_CREATED', `Arrivage créé: ${form.referenceNumber} de ${form.supplier}`)
+      await logAction('ARRIVAL_CREE', `Arrivage créé: ${form.referenceNumber} de ${form.supplier}`)
       showToast('Arrivage créé avec succès', 'success')
 
       setForm({
@@ -189,7 +217,7 @@ export default function Arrivals() {
         throw new Error(err.error || 'Failed to confirm arrival')
       }
 
-      await logAction('ARRIVAL_CONFIRMED', 'Arrivage confirmé - Stock augmenté et coût moyen pondéré calculé')
+      await logAction('ARRIVAGE_CONFIRME', 'Arrivage confirmé - Stock augmenté et coût moyen pondéré calculé')
       showToast('Arrivage confirmé - Stock et coût moyen pondéré mis à jour', 'success')
       await fetchArrivals()
     } catch (e) {
@@ -213,7 +241,7 @@ export default function Arrivals() {
         throw new Error(err.error || 'Failed to cancel arrival')
       }
 
-      await logAction('ARRIVAL_CANCELLED', 'Arrivage annulé')
+      await logAction('ARRIVAGE_ANNULE', 'Arrivage annulé')
       showToast('Arrivage annulé', 'success')
       await fetchArrivals()
     } catch (e) {
@@ -222,7 +250,13 @@ export default function Arrivals() {
     }
   }
 
-  const filtered = filter === 'all' ? arrivals : arrivals.filter(a => a.status === filter)
+  const filtered = arrivals.filter(a => {
+    const statusMatch = filter === 'all' || a.status === filter
+    const searchMatch = !searchTerm ||
+      (a.referenceNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (a.supplier || '').toLowerCase().includes(searchTerm.toLowerCase())
+    return statusMatch && searchMatch
+  })
 
   return (
     <div className="space-y-4">
@@ -234,16 +268,31 @@ export default function Arrivals() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <Package className="text-blue-600" /> Gestion des Arrivages
+          </h2>
+          <p className="text-slate-500 text-sm">Suivez et validez les réceptions de marchandises</p>
+        </div>
 
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Nouvel Arrivage
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
+          >
+            <Download size={18} />
+            <span>Exporter</span>
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
+          >
+            <Plus size={18} />
+            <span>{showForm ? 'Fermer Formulaire' : 'Nouvel Arrivage'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Create/Edit Form */}
@@ -261,7 +310,7 @@ export default function Arrivals() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Basic Info */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Numéro de Référence *</label>
                 <input
@@ -322,95 +371,127 @@ export default function Arrivals() {
 
               <div className="space-y-2">
                 {form.items.map((item, idx) => (
-                  <div key={idx} className="flex gap-2 items-start p-3 bg-gray-50 rounded border">
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-600 mb-1">Produit</label>
+                  <div key={idx} className="flex flex-col md:flex-row gap-4 items-start p-4 bg-slate-50/50 rounded-xl border border-slate-200/60 shadow-sm">
+                    <div className="flex-1 w-full">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">Produit</label>
                       <select
                         value={item.productId}
                         onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}
-                        className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-all font-medium"
                       >
                         <option value="">-- Sélectionner --</option>
                         {products.map(p => (
                           <option key={p.id} value={p.id}>
-                            {p.sku} - {p.name}
+                            {p.sku} - {p.name} {p.model ? `(${p.model})` : ''}
                           </option>
                         ))}
                       </select>
                     </div>
-                    <div className="w-20">
-                      <label className="block text-xs text-gray-600 mb-1">Quantité</label>
+                    <div className="w-full md:w-32">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">Quantité</label>
                       <input
                         type="number"
                         min="1"
                         value={item.qtyReceived}
                         onChange={(e) => handleItemChange(idx, 'qtyReceived', e.target.value)}
-                        placeholder="Qty"
-                        className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:border-blue-500"
+                        placeholder="0"
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-all font-mono"
                       />
                     </div>
-                    <div className="w-24">
-                      <label className="block text-xs text-gray-600 mb-1">Prix Achat</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.costPrice}
-                        onChange={(e) => handleItemChange(idx, 'costPrice', e.target.value)}
-                        placeholder="0.00"
-                        className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:border-blue-500"
-                      />
+                    <div className="w-full md:w-40">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-tight mb-1">Prix Achat (Unitaire)</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.costPrice}
+                          onChange={(e) => handleItemChange(idx, 'costPrice', e.target.value)}
+                          placeholder="0.00"
+                          className="w-full pl-3 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-all font-mono text-right"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Ar</span>
+                      </div>
                     </div>
-                    {form.items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeItem(idx)}
-                        className="mt-5 p-1 text-red-600 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <div className="w-full md:w-auto self-end md:self-auto flex justify-end">
+                      {form.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                          title="Supprimer l'article"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 pt-4 border-t">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
-              >
-                <Check className="w-4 h-4" />
-                Créer l'Arrivage
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
-              >
-                Annuler
-              </button>
+            <div className="flex flex-col md:flex-row gap-4 pt-6 border-t border-slate-100">
+              <div className="flex flex-col md:flex-row gap-2 order-2 md:order-1">
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 flex items-center justify-center gap-2 font-bold shadow-md shadow-green-100 transition-all active:scale-95 whitespace-nowrap"
+                >
+                  <Check className="w-5 h-5" />
+                  Enregistrer l'Arrivage
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="px-6 py-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors font-bold"
+                >
+                  Annuler
+                </button>
+              </div>
+
+              <div className="ml-auto flex flex-col items-end justify-center order-1 md:order-2 bg-slate-50 px-6 py-2 rounded-2xl border border-slate-100">
+                <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-0.5">Total estimé</span>
+                <span className="text-2xl font-black text-slate-900 font-mono">
+                  {form.items.reduce((sum, i) => sum + (Number(i.qtyReceived || 0) * Number(i.costPrice || 0)), 0).toLocaleString()} <span className="text-sm font-bold text-slate-400">Ar</span>
+                </span>
+              </div>
             </div>
           </form>
         </div>
       )}
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 border-b">
-        {['all', 'pending', 'confirmed', 'cancelled'].map(status => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 font-medium border-b-2 transition ${filter === status
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-gray-800'
-              }`}
-          >
-            {status === 'all' ? 'Tous' : status === 'pending' ? 'En Attente' : status === 'confirmed' ? 'Confirmés' : 'Annulés'}
-            {` (${status === 'all' ? arrivals.length : arrivals.filter(a => a.status === status).length})`}
-          </button>
-        ))}
+      {/* Filter & Search Bar */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-2">
+        <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-xl w-full md:w-fit">
+          {['all', 'pending', 'confirmed', 'cancelled'].map(status => (
+            <button
+              key={status}
+              onClick={() => setFilter(status)}
+              className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${filter === status
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                }`}
+            >
+              {status === 'all' ? 'Tous' : status === 'pending' ? 'En Attente' : status === 'confirmed' ? 'Confirmés' : 'Annulés'}
+              <span className="ml-2 py-0.5 px-1.5 bg-slate-200 text-slate-600 rounded text-[10px]">
+                {status === 'all' ? arrivals.length : arrivals.filter(a => a.status === status).length}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full md:w-72">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="text-slate-400" size={18} />
+          </div>
+          <input
+            type="text"
+            placeholder="Référence or fournisseur..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-sm"
+          />
+        </div>
       </div>
 
       {/* Arrivals List */}
@@ -421,26 +502,37 @@ export default function Arrivals() {
           <div className="text-center py-8 text-gray-500">Aucun arrivage</div>
         ) : (
           filtered.map(arrival => (
-            <div key={arrival.id} className="bg-white border rounded p-4">
+            <div key={arrival.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
               {/* Header */}
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-semibold text-lg">{arrival.referenceNumber}</h3>
-                  <p className="text-sm text-gray-600">
-                    {arrival.supplier} • {new Date(arrival.arrivalDate).toLocaleDateString('fr-FR')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded text-sm font-medium ${arrival.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    arrival.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                      'bred-100 text-red-800'
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-start gap-3">
+                  <div className={`p-2.5 rounded-xl ${arrival.status === 'pending' ? 'bg-amber-100 text-amber-600' :
+                    arrival.status === 'confirmed' ? 'bg-emerald-100 text-emerald-600' :
+                      'bg-red-100 text-red-600'
                     }`}>
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-lg leading-tight">{arrival.referenceNumber}</h3>
+                    <p className="text-sm text-slate-500 font-medium mt-0.5">
+                      {arrival.supplier} • {new Date(arrival.arrivalDate).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm border ${arrival.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                    arrival.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                      'bg-red-50 text-red-700 border-red-100'
+                    }`}>
+                    {arrival.status === 'pending' ? <AlertCircle size={12} /> :
+                      arrival.status === 'confirmed' ? <CheckCircle2 size={12} /> :
+                        <X size={12} />}
                     {arrival.status === 'pending' ? 'En Attente' :
                       arrival.status === 'confirmed' ? 'Confirmé' :
                         'Annulé'}
-                  </span>
+                  </div>
                   {arrival.receivedByUser && (
-                    <span className="text-sm text-gray-500">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
                       Par {arrival.receivedByUser.displayName}
                     </span>
                   )}
@@ -452,55 +544,108 @@ export default function Arrivals() {
                 <p className="text-sm text-gray-600 mb-3">📝 {arrival.notes}</p>
               )}
 
-              {/* Items Table */}
-              <div className="mb-3 overflow-x-auto">
+              {/* Items Table - Desktop View */}
+              <div className="hidden-on-sales-mobile mb-4 overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50">
-                      <th className="px-2 py-2 text-left">SKU</th>
-                      <th className="px-2 py-2 text-left">Produit</th>
-                      <th className="px-2 py-2 text-right">Quantité</th>
-                      <th className="px-2 py-2 text-right">Prix Achat</th>
-                      <th className="px-2 py-2 text-right">Total</th>
+                    <tr className="bg-slate-50/80 border-b border-slate-100">
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">SKU</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Produit</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Modèle</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Compatibilité</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">Quantité</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">Prix Achat</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-50">
                     {arrival.items.map(item => (
-                      <tr key={item.id} className="border-b hover:bg-gray-50">
-                        <td className="px-2 py-2 font-mono text-xs">{item.sku}</td>
-                        <td className="px-2 py-2">{item.productName}</td>
-                        <td className="px-2 py-2 text-right font-semibold">{item.qtyReceived}</td>
-                        <td className="px-2 py-2 text-right">{item.costPrice.toFixed(2)} Ar</td>
-                        <td className="px-2 py-2 text-right font-semibold">{(item.qtyReceived * item.costPrice).toFixed(2)} Ar</td>
+                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs text-slate-500">{item.sku}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-700">{item.productName}</td>
+                        <td className="px-4 py-3 text-slate-600">{item.model || '-'}</td>
+                        <td className="px-4 py-3 text-slate-500 text-xs italic">{item.compatibleModels || '-'}</td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="px-2 py-1 bg-slate-100 rounded text-xs font-bold text-slate-600">{item.qtyReceived}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono text-slate-600">{item.costPrice.toFixed(2)} Ar</td>
+                        <td className="px-4 py-3 text-right font-bold text-slate-900">{(item.qtyReceived * item.costPrice).toFixed(2)} Ar</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="font-semibold">
-                      <td colSpan="2" className="px-2 py-2">Total:</td>
-                      <td className="px-2 py-2 text-right">{arrival.items.reduce((sum, i) => sum + i.qtyReceived, 0)}</td>
-                      <td colSpan="2"></td>
-                      <td className="px-2 py-2 text-right">
-                        {arrival.items.reduce((sum, i) => sum + (i.qtyReceived * i.costPrice), 0).toFixed(2)} Ar
+                    <tr className="bg-slate-50/30 font-bold border-t border-slate-100">
+                      <td colSpan="4" className="px-4 py-3 text-slate-500 uppercase text-xs">Total cumulé</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="text-slate-900">{arrival.items.reduce((sum, i) => sum + i.qtyReceived, 0)} items</span>
+                      </td>
+                      <td colSpan="2" className="px-4 py-3 text-right">
+                        <span className="text-blue-600 font-black text-lg">
+                          {arrival.items.reduce((sum, i) => sum + (i.qtyReceived * i.costPrice), 0).toFixed(2)} Ar
+                        </span>
                       </td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
 
+              {/* Items List - Mobile View */}
+              <div className="visible-on-sales-mobile space-y-3 mb-4">
+                {arrival.items.map(item => (
+                  <div key={item.id} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.sku}</div>
+                        <div className="font-bold text-slate-800">{item.productName}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quantité</div>
+                        <div className="text-blue-600 font-black">{item.qtyReceived}</div>
+                      </div>
+                    </div>
+
+                    {(item.model || item.compatibleModels) && (
+                      <div className="mb-3 p-2 bg-white/50 rounded-lg border border-slate-200/50 text-[11px]">
+                        {item.model && <div className="text-slate-600 font-medium">Modèle: {item.model}</div>}
+                        {item.compatibleModels && <div className="text-slate-500 italic mt-0.5">Compatibilité: {item.compatibleModels}</div>}
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center pt-2 border-t border-dashed border-slate-200">
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prix Unitaire</div>
+                        <div className="text-slate-600 font-mono text-xs">{item.costPrice.toFixed(2)} Ar</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sous-total</div>
+                        <div className="text-slate-900 font-bold">{(item.qtyReceived * item.costPrice).toFixed(2)} Ar</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Mobile Total */}
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 flex justify-between items-center">
+                  <div className="text-xs font-bold text-blue-700 uppercase">Total Arrivage</div>
+                  <div className="text-xl font-black text-blue-800">
+                    {arrival.items.reduce((sum, i) => sum + (i.qtyReceived * i.costPrice), 0).toFixed(2)} Ar
+                  </div>
+                </div>
+              </div>
+
               {/* Actions */}
               {arrival.status === 'pending' && (
-                <div className="flex gap-2">
+                <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => confirmArrival(arrival.id)}
-                    className="flex-1 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-2 text-sm"
+                    className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 flex items-center justify-center gap-2 text-sm font-bold shadow-md shadow-emerald-100 transition-all active:scale-95"
                   >
                     <Check className="w-4 h-4" />
                     Confirmer & Augmenter Stock
                   </button>
                   <button
                     onClick={() => cancelArrival(arrival.id)}
-                    className="flex-1 px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 flex items-center justify-center gap-2 text-sm"
+                    className="px-4 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl hover:bg-red-50 flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95"
                   >
                     <X className="w-4 h-4" />
                     Annuler
