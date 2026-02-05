@@ -236,7 +236,7 @@ export default function Arrivals() {
 
       {/* Header */}
       <div className="flex justify-between items-center">
-     
+
         <button
           onClick={() => setShowForm(!showForm)}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
@@ -403,8 +403,8 @@ export default function Arrivals() {
             key={status}
             onClick={() => setFilter(status)}
             className={`px-4 py-2 font-medium border-b-2 transition ${filter === status
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-800'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-800'
               }`}
           >
             {status === 'all' ? 'Tous' : status === 'pending' ? 'En Attente' : status === 'confirmed' ? 'Confirmés' : 'Annulés'}
@@ -432,8 +432,8 @@ export default function Arrivals() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`px-3 py-1 rounded text-sm font-medium ${arrival.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      arrival.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                        'bred-100 text-red-800'
+                    arrival.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                      'bred-100 text-red-800'
                     }`}>
                     {arrival.status === 'pending' ? 'En Attente' :
                       arrival.status === 'confirmed' ? 'Confirmé' :

@@ -318,20 +318,17 @@ export default function ActivityTracking() {
     <div className="min-h-screen bg-[#f8fafc] p-4 md:p-10 font-sans text-slate-900">
 
       {/* Header avec Actions */}
-      <div className="max-w-5xl mx-15 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10" >
+      <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8" >
         <div>
-          <div className="flex items-center gap-3 mb-2">
-          </div>
           <p className="text-slate-500 text-sm">Surveillance en temps réel des flux de données et actions utilisateurs.</p>
         </div>
-
       </div>
 
-      <div className="max-w-9xl mx-15 space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Barre de Filtres Flottante */}
-        <div className="bg-white rounded-md shadow-sm border border-slate-200 p-2 flex flex-col lg:flex-row gap-2">
-          <div className="flex bg-slate-100 p-1 rounded-xl">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col xl:flex-row gap-4">
+          <div className="flex flex-wrap bg-slate-100 p-1 rounded-xl">
             {[
               { id: 'all', label: 'Global', icon: <History size={16} /> },
               { id: 'user', label: 'Par Employé', icon: <User size={16} /> },
@@ -340,7 +337,7 @@ export default function ActivityTracking() {
               <button
                 key={f.id}
                 onClick={() => { setFilter(f.id); if (f.id === 'all') fetchLogs(); }}
-                className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${filter === f.id ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-700'
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2 rounded-lg text-sm font-bold transition-all ${filter === f.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                   }`}
               >
                 {f.icon} {f.label}
@@ -349,13 +346,13 @@ export default function ActivityTracking() {
           </div>
 
           {filter !== 'all' && (
-            <div className=" max-w-2xl flex-grow flex  sm:flex-row gap-5 animate-in zoom-in-95 duration-200  ">
+            <div className="flex flex-col sm:flex-row gap-3 flex-grow animate-in fade-in slide-in-from-left-2">
               <select
                 value={filter === 'user' ? selectedUser : selectedStore}
                 onChange={(e) => filter === 'user' ? setSelectedUser(e.target.value) : setSelectedStore(e.target.value)}
-                className="flex-grow bg-slate-100 border-2  rounded-md text-sm font-semibold focus:ring-2 focus:ring-blue-500/20 px-10"
+                className="flex-grow bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-blue-500/20 px-3 py-2 min-h-[44px]"
               >
-                <option className='' value="">Sélectionner {filter === 'user' ? 'un compte' : 'un point de vente'}...</option>
+                <option value="">Sélectionner {filter === 'user' ? 'un compte' : 'un point de vente'}...</option>
                 {filter === 'user'
                   ? users.map(u => <option key={u.id} value={u.id}>{u.displayName}</option>)
                   : Array.from(stores).map(s => <option key={s} value={s}>{s}</option>)
@@ -363,7 +360,7 @@ export default function ActivityTracking() {
               </select>
               <button
                 onClick={fetchLogs}
-                className="bg-slate-900 rounded-md hover:bg-slate-800 text-white px-8 py-2  text-sm font-bold transition-transform active:scale-95"
+                className="bg-slate-900 rounded-lg hover:bg-slate-800 text-white px-8 py-2 text-sm font-bold transition-transform active:scale-95 min-h-[44px]"
               >
                 Filtrer
               </button>
@@ -373,7 +370,8 @@ export default function ActivityTracking() {
 
         {/* Table d'activité */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200/60 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* DESKTOP TABLE */}
+          <div className="overflow-x-auto hidden-on-sales-mobile">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
@@ -449,6 +447,58 @@ export default function ActivityTracking() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* MOBILE CARDS VIEW */}
+          <div className="visible-on-sales-mobile divide-y divide-slate-100">
+            {loading ? (
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="p-4 animate-pulse space-y-3">
+                  <div className="h-4 bg-slate-100 rounded w-1/4"></div>
+                  <div className="h-20 bg-slate-100 rounded w-full"></div>
+                </div>
+              ))
+            ) : logs.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-sm">Aucune activité trouvée</div>
+            ) : (
+              logs.map((log) => {
+                const config = getActionConfig(log.action);
+                const dateInfo = formatDate(log.timestamp);
+                return (
+                  <div key={log.id} className="p-4 bg-white active:bg-slate-50 transition-colors">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs">
+                          {log.user?.displayName?.charAt(0) || '?'}
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-slate-800">{log.user?.displayName || 'Inconnu'}</div>
+                          <div className="text-[10px] text-slate-500 font-mono tracking-tighter">
+                            {dateInfo.main} • {dateInfo.time}
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${config.color}`}>
+                        {config.icon} {log.action}
+                      </span>
+                    </div>
+
+                    <div className="mb-3">
+                      <ExpandableDescription text={log.description} />
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-50">
+                      <span className="text-[10px] text-slate-400 font-mono italic">@{log.user?.username || '—'}</span>
+                      {log.store && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                          <Store size={10} /> {log.store}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
 
           <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 flex justify-between items-center">
