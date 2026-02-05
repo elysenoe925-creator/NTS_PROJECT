@@ -333,7 +333,7 @@ app.post('/api/products/:sku/reorder', auth, async (req, res) => {
       data: {
         userId: req.user.sub,
         action: 'RESTOCK_REQUEST',
-        description: `Demande de réappro pour ${sku} (${quantity})`,
+        description: `Demande de réapprovisionnement pour ${sku} (${quantity})`,
         store: targetStore
       }
     })
@@ -398,7 +398,7 @@ app.post('/api/products/:sku/cancel-reorder', auth, async (req, res) => {
       data: {
         userId: req.user.sub,
         action: 'RESTOCK_CANCEL',
-        description: `Demande de réappro annulée pour ${sku}`,
+        description: `Demande de réapprovisionnement annulée pour ${sku}`,
         store: targetStore
       }
     })
@@ -471,7 +471,8 @@ app.get('/api/orders', auth, async (req, res) => {
         items: {
           include: { product: true }
         },
-        user: { select: { id: true, username: true, displayName: true, store: true } }
+        user: { select: { id: true, username: true, displayName: true, store: true } },
+        arrival: { select: { id: true, referenceNumber: true, status: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -499,7 +500,8 @@ app.get('/api/orders', auth, async (req, res) => {
         notes: i.notes
       })),
       createdAt: o.createdAt,
-      updatedAt: o.updatedAt
+      updatedAt: o.updatedAt,
+      arrival: o.arrival
     }))
 
     res.json(mapped)
@@ -663,12 +665,44 @@ app.put('/api/orders/:id/status', auth, async (req, res) => {
       }
     })
 
+    // If status is DELIVERED, automatically create a pending arrival if one implies it
+    if (status === 'delivered' || status === 'received') {
+      // Check if arrival already exists
+      const existingArrival = await prisma.arrival.findUnique({ where: { orderId: id } })
+      if (!existingArrival) {
+        // Create arrival
+        await prisma.arrival.create({
+          data: {
+            referenceNumber: `ARR-${order.referenceNumber.replace('ORD-', '')}`,
+            supplier: order.supplier || 'Fournisseur inconnu',
+            arrivalDate: new Date(),
+            receivedBy: req.user.sub,
+            status: 'pending',
+            store: order.store,
+            notes: `Auto-généré depuis la commande ${order.referenceNumber}`,
+            orderId: order.id,
+            items: {
+              create: updated.items.map(item => ({
+                productId: item.productId,
+                qtyReceived: item.quantity,
+                costPrice: item.unitPrice,
+                notes: item.notes
+              }))
+            }
+          }
+        })
+
+        // Notify
+        broadcastArrivals()
+      }
+    }
+
     // Log the action
     await prisma.actionLog.create({
       data: {
         userId: req.user.sub,
         action: 'ORDER_STATUS_CHANGED',
-        description: `Commande ${order.referenceNumber}: ${order.status} → ${status}`,
+        description: `Commande ${order.referenceNumber}: ${order.status === 'pending' ? 'En attente' : order.status === 'approved' ? 'Approuvée' : order.status === 'rejected' ? 'Rejetée' : order.status === 'received' ? 'Reçue' : order.status} → ${status === 'pending' ? 'En attente' : status === 'approved' ? 'Approuvée' : status === 'rejected' ? 'Rejetée' : status === 'received' ? 'Reçue' : status}`,
         store: order.store
       }
     })
@@ -1266,7 +1300,8 @@ app.put('/api/arrivals/:id/confirm', auth, async (req, res) => {
           data: {
             qty: stockRow.qty + item.qtyReceived,
             cost: newCost,
-            margin: stockRow.margin != null ? stockRow.margin : product.margin
+            margin: stockRow.margin != null ? stockRow.margin : product.margin,
+            reorderRequested: false // Clear reorder request flag
           }
         })
       } else {
@@ -1277,7 +1312,8 @@ app.put('/api/arrivals/:id/confirm', auth, async (req, res) => {
             store: arrival.store,
             qty: item.qtyReceived,
             cost: newCost,
-            margin: product.margin
+            margin: product.margin,
+            reorderRequested: false
           }
         })
       }

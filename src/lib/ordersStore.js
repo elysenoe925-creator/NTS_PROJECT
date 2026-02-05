@@ -332,6 +332,35 @@ export async function submitOrder(orderId) {
 }
 
 /**
+ * Réceptionne une commande (crée un arrivage)
+ */
+export async function receiveOrder(orderId) {
+  try {
+    const token = getAuthToken()
+    if (!token) throw new Error('Not authenticated')
+
+    const response = await fetch(`${API_BASE}/api/orders/${orderId}/receive`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to receive order')
+    }
+
+    const data = await response.json()
+    await refreshOrders()
+    return data.arrivalId
+  } catch (e) {
+    console.error('Error receiving order:', e)
+    throw e
+  }
+}
+
+/**
  * Retourne les statistiques des commandes
  */
 export function getOrderStats() {

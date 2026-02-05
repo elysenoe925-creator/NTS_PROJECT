@@ -84,6 +84,8 @@ model Arrival {
   items       ArrivalItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  orderId     Int?     @unique
+  order       Order?   @relation(fields: [orderId], references: [id])
 }
 
 model ArrivalItem {
@@ -112,6 +114,7 @@ model Order {
   items           OrderItem[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+  arrival         Arrival?
 }
 
 model OrderItem {

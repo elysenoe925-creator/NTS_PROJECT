@@ -230,11 +230,26 @@ import {
 } from 'lucide-react'
 
 
+const getActionLabel = (action) => {
+  const map = {
+    'ARRIVAL_CREATED': 'Arrivage Créé',
+    'ARRIVAL_CONFIRMED': 'Arrivage Confirmé',
+    'ARRIVAL_CANCELLED': 'Arrivage Annulé',
+    'ORDER_CREATED': 'Commande Créée',
+    'ORDER_STATUS_CHANGED': 'Statut Modifié',
+    'ORDER_DELETED': 'Commande Supprimée',
+    'RESTOCK_REQUEST': 'Demande Réappro',
+    'RESTOCK_CANCEL': 'Annulation Réappro',
+    'LOGIN': 'Connexion'
+  }
+  return map[action] || action
+}
+
 const getActionConfig = (action) => {
   const act = action?.toLowerCase() || '';
-  if (act.includes('delete') || act.includes('suppression'))
+  if (act.includes('delete') || act.includes('suppression') || act.includes('cancel') || act.includes('annul'))
     return { color: "bg-red-50 text-red-700 border-red-100", icon: <Trash2 size={12} /> };
-  if (act.includes('update') || act.includes('modification'))
+  if (act.includes('update') || act.includes('modification') || act.includes('change') || act.includes('confirm'))
     return { color: "bg-amber-50 text-amber-700 border-amber-100", icon: <Pencil size={12} /> };
   if (act.includes('create') || act.includes('creation'))
     return { color: "bg-emerald-50 text-emerald-700 border-emerald-100", icon: <Plus size={12} /> };
@@ -426,7 +441,7 @@ export default function ActivityTracking() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${config.color}`}>
                             {config.icon}
-                            {log.action}
+                            {getActionLabel(log.action)}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -479,7 +494,7 @@ export default function ActivityTracking() {
                         </div>
                       </div>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${config.color}`}>
-                        {config.icon} {log.action}
+                        {config.icon} {getActionLabel(log.action)}
                       </span>
                     </div>
 

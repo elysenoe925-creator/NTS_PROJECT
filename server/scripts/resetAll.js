@@ -1,3 +1,4 @@
+require('dotenv').config()
 const { PrismaClient } = require('@prisma/client')
 
 const prisma = new PrismaClient({
@@ -31,8 +32,9 @@ async function resetAll() {
     console.log('   • Suppression des Produits...')
     await prisma.product.deleteMany({})
 
-    console.log('   • Suppression des Utilisateurs...')
-    await prisma.user.deleteMany({})
+    // console.log('   • Suppression des Utilisateurs...')
+    // await prisma.user.deleteMany({}) // DÉSACTIVÉ : Ne pas supprimer les utilisateurs pour éviter de perdre les mots de pases modifiés
+    console.log('   ⚠️  Suppression des Utilisateurs sautée (pour préserver les comptes)')
 
     console.log('\n✅ Base de données réinitialisée COMPLÈTEMENT!')
     console.log('\nRésumé:')

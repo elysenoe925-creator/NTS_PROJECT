@@ -1,3 +1,4 @@
+require('dotenv').config()
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcrypt')
 
@@ -29,24 +30,36 @@ async function reseed() {
     console.log('   • Suppression des Stocks...')
     await prisma.stock.deleteMany({})
 
-    console.log('   • Suppression des Produits...')
+    console.log('   • suppression des Produits...')
     await prisma.product.deleteMany({})
 
-    console.log('   • Suppression des Utilisateurs...')
-    await prisma.user.deleteMany({})
+    // console.log('   • Suppression des Utilisateurs...')
+    // await prisma.user.deleteMany({}) // DO NOT DELETE USERS TO PRESERVE MANUAL CHANGES
 
     console.log('\n🌱 Création des données de seed...')
 
     // Créer les utilisateurs
-    console.log('   • Création des utilisateurs...')
-    const pw = await bcrypt.hash('admin123', 10)
-    await prisma.user.create({ data: { username: 'admin', displayName: 'Administrateur', passwordHash: pw, role: 'admin', store: 'all' } })
+    console.log('   • Upsert des utilisateurs...')
+    const adminPassword = await bcrypt.hash('admin123', 10)
+    await prisma.user.upsert({
+      where: { username: 'admin' },
+      update: {},
+      create: { username: 'admin', displayName: 'Administrateur', passwordHash: adminPassword, role: 'admin', store: 'all' }
+    })
 
-    const pw2 = await bcrypt.hash('mjpass', 10)
-    await prisma.user.create({ data: { username: 'manager_mj', displayName: 'Manager Majunga', passwordHash: pw2, role: 'manager', store: 'majunga' } })
+    const managerPassword = await bcrypt.hash('mjpass', 10)
+    await prisma.user.upsert({
+      where: { username: 'manager_mj' },
+      update: {},
+      create: { username: 'manager_mj', displayName: 'Manager Majunga', passwordHash: managerPassword, role: 'manager', store: 'majunga' }
+    })
 
-    const pw3 = await bcrypt.hash('tmpass', 10)
-    await prisma.user.create({ data: { username: 'emp_tm', displayName: 'Employé Tamatave', passwordHash: pw3, role: 'employee', store: 'tamatave' } })
+    const employeePassword = await bcrypt.hash('tmpass', 10)
+    await prisma.user.upsert({
+      where: { username: 'emp_tm' },
+      update: {},
+      create: { username: 'emp_tm', displayName: 'Employé Tamatave', passwordHash: employeePassword, role: 'employee', store: 'tamatave' }
+    })
 
     // Créer les produits avec coût et marge
     console.log('   • Création des produits...')
