@@ -74,15 +74,13 @@ export default function Topbar() {
 
 import React, { useState, useEffect } from 'react'
 import { useStore } from '../lib/StoreContext'
-import { getCurrentUser, logout, subscribeAuth } from '../lib/authStore'
-import { LogOut } from 'lucide-react'
+import { getCurrentUser, subscribeAuth } from '../lib/authStore'
 import NotificationBadge from './NotificationBadge'
 import { useSettings } from '../lib/settingsStore'
 
 export default function Topbar() {
   const { currentStore, setCurrentStore } = useStore()
   const [user, setUser] = useState(() => getCurrentUser())
-  const [loadingLogout, setLoadingLogout] = useState(false)
   const [searchFocus, setSearchFocus] = useState(false)
   const [route, setRoute] = useState(window.location.hash || '#/dashboard')
   const { settings } = useSettings()
@@ -97,15 +95,6 @@ export default function Topbar() {
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
-
-  const handleLogout = () => {
-    setLoadingLogout(true)
-    setTimeout(() => {
-      logout()
-      setLoadingLogout(false)
-      window.location.hash = '#/'
-    }, 1500)
-  }
 
   return (
     <header className="topbar-responsive">
@@ -164,23 +153,6 @@ export default function Topbar() {
 
             {user && user.role === 'admin' && (
               <NotificationBadge section="global" className="mr-3" />
-            )}
-
-            {user && (
-              <button
-                className={`logout-btn ${loadingLogout ? 'loading' : ''}`}
-                onClick={handleLogout}
-                disabled={loadingLogout}
-                title="Déconnexion"
-              >
-                {loadingLogout ? (
-                  <span className="spinner-small"></span>
-                ) : (
-                  <span className="iconify">
-                    <LogOut />
-                  </span>
-                )}
-              </button>
             )}
           </div>
         </div>

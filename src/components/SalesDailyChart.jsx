@@ -53,9 +53,9 @@ const options = {
       backgroundColor: 'rgba(15, 23, 42, 0.95)',
       borderColor: 'rgb(8, 255, 28)',
       borderWidth: 1,
-      padding: 14,
-      titleFont: { size: 13, weight: 'bold', family: 'Inter, sans-serif' },
-      bodyFont: { size: 12, family: 'Inter, sans-serif' },
+      padding: window.innerWidth < 640 ? 10 : 14,
+      titleFont: { size: 12, weight: 'bold', family: 'Inter, sans-serif' },
+      bodyFont: { size: 11, family: 'Inter, sans-serif' },
       displayColors: false,
       titleColor: '#f0f9ff',
       bodyColor: '#bfdbfe',
@@ -67,22 +67,24 @@ const options = {
   scales: {
     y: {
       beginAtZero: true,
-      grid: { 
-        color: 'rgba(233, 233, 233, 0.08)', 
+      grid: {
+        color: 'rgba(233, 233, 233, 0.08)',
         drawBorder: false,
         lineWidth: 1
       },
       ticks: {
-        font: { size: 11, family: 'Inter, sans-serif', weight: '500' },
+        font: { size: window.innerWidth < 640 ? 10 : 11, family: 'Inter, sans-serif', weight: '500' },
         color: '#64748b',
         callback: (value) => value.toLocaleString('fr-FR')
       }
     },
     x: {
       grid: { display: false, drawBorder: false },
-      ticks: { 
-        font: { size: 10, family: 'Inter, sans-serif', weight: '500' },
-        color: '#64748b'
+      ticks: {
+        font: { size: window.innerWidth < 640 ? 9 : 10, family: 'Inter, sans-serif', weight: '500' },
+        color: '#64748b',
+        maxRotation: 45,
+        minRotation: 0
       }
     }
   }
@@ -158,7 +160,7 @@ export default function SalesDailyChart() {
           label: 'Ventes du jour',
           data: days.map(d => map.get(d.key) || 0),
           backgroundColor: gradient,
-    // Couleur de la ligne opaque
+          // Couleur de la ligne opaque
           borderColor: 'rgba(54, 162, 235, 1)',
           borderWidth: 0,
           borderRadius: 6,
@@ -201,7 +203,7 @@ export default function SalesDailyChart() {
           <div>Aujourd'hui: {variation.todayTotal.toLocaleString('fr-FR')} Ar</div>
         </div>
       </div>
-      <div className="modern-chart-container " style={{ height: '280px', width: '100%'}}>
+      <div className="modern-chart-container " style={{ width: '100%', position: 'relative' }}>
         <Bar ref={chartRef} options={options} data={chartData} />
       </div>
     </div>

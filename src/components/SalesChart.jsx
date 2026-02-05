@@ -52,9 +52,9 @@ const options = {
       backgroundColor: 'rgba(15, 23, 42, 0.95)',
       borderColor: 'rgba(59, 246, 184, 0.5)',
       borderWidth: 1,
-      padding: 14,
-      titleFont: { size: 13, weight: 'thin', family: 'Inter, sans-serif' },
-      bodyFont: { size: 12, family: 'Inter, sans-serif' },
+      padding: window.innerWidth < 640 ? 10 : 14,
+      titleFont: { size: 12, weight: 'thin', family: 'Inter, sans-serif' },
+      bodyFont: { size: 11, family: 'Inter, sans-serif' },
       displayColors: false,
       titleColor: '#f0fdfa',
       bodyColor: '#d1fae5',
@@ -72,7 +72,7 @@ const options = {
         lineWidth: 1
       },
       ticks: {
-        font: { size: 11, family: 'Inter, sans-serif' },
+        font: { size: window.innerWidth < 640 ? 10 : 11, family: 'Inter, sans-serif' },
         color: '#64748b',
         callback: (value) => value.toLocaleString('fr-FR')
       }
@@ -80,8 +80,10 @@ const options = {
     x: {
       grid: { display: false, drawBorder: false },
       ticks: {
-        font: { size: 11, family: 'Inter, sans-serif' },
-        color: '#64748b'
+        font: { size: window.innerWidth < 640 ? 10 : 11, family: 'Inter, sans-serif' },
+        color: '#64748b',
+        maxRotation: 45,
+        minRotation: 0
       }
     }
   }
@@ -182,7 +184,7 @@ export default function SalesChart() {
           <div>Dernier: {variation.todayTotal.toLocaleString('fr-FR')} Ar</div>
         </div>
       </div>
-      <div className="modern-chart-container  " style={{ height: '320px', width: '100%', position: 'relative' }}>
+      <div className="modern-chart-container  " style={{ width: '100%', position: 'relative' }}>
         <Line ref={chartRef} options={options} data={chartData} />
       </div>
     </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { getCurrentUser, subscribeAuth } from '../lib/authStore'
+import { getCurrentUser, logout, subscribeAuth } from '../lib/authStore'
+import { LogOut } from 'lucide-react'
 import { useSettings } from '../lib/settingsStore'
 
 const ALL_LINKS = [
@@ -11,7 +12,7 @@ const ALL_LINKS = [
   { href: '#/orders', id: 'orders', label: 'Commandes' },
   { href: '#/tracking', id: 'tracking', label: 'Suivi' },
   { href: '#/user', id: 'user', label: 'Utilisateurs' }
-  
+
 ]
 
 const ICONS = {
@@ -23,7 +24,7 @@ const ICONS = {
   '#/orders': 'mdi:clipboard-list',
   '#/tracking': 'mdi:history',
   '#/user': 'mdi:user',
-  
+
 }
 
 export default function Sidebar({ onToggleCalculator }) {
@@ -31,6 +32,7 @@ export default function Sidebar({ onToggleCalculator }) {
   const [user, setUser] = useState(() => getCurrentUser())
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [loadingLogout, setLoadingLogout] = useState(false)
   const { settings } = useSettings() // Subscribe to settings changes
 
   useEffect(() => {
@@ -43,6 +45,15 @@ export default function Sidebar({ onToggleCalculator }) {
     const unsub = subscribeAuth(u => setUser(u))
     return unsub
   }, [])
+
+  const handleLogout = () => {
+    setLoadingLogout(true)
+    setTimeout(() => {
+      logout()
+      setLoadingLogout(false)
+      window.location.hash = '#/'
+    }, 1500)
+  }
 
   // If the user is an employee, show only Sales, Stock, and Arrivals links
   const LINKS = user && user.role === 'employee'
@@ -146,26 +157,31 @@ export default function Sidebar({ onToggleCalculator }) {
             </span>
             {!isCollapsed && <span className="nav-label">Calculatrice</span>}
           </a>
+
+          {/* Logout Button */}
+          {user && (
+            <a
+              href="#"
+              className={`logout-nav-item ${loadingLogout ? 'loading' : ''}`}
+              onClick={(e) => {
+                e.preventDefault()
+                handleLogout()
+                closeMobile()
+              }}
+              title={isCollapsed ? 'Déconnexion' : 'Déconnexion'}
+            >
+              <span className="link-icon-wrapper">
+                {loadingLogout ? (
+                  <span className="spinner-small" style={{ width: 18, height: 18 }}></span>
+                ) : (
+                  <span className="iconify link-icon" data-icon="mdi:logout" data-inline="false" aria-hidden="true"></span>
+                )}
+              </span>
+              {!isCollapsed && <span className="nav-label">{loadingLogout ? 'Déconnexion...' : 'Déconnexion'}</span>}
+            </a>
+          )}
         </nav>
 
-        {/* Footer Section */}
-        {!isCollapsed && (
-          <div className="sidebar-footer">
-            <div className="user-section">
-              {user && (
-                <>
-                  <div className="user-avatar">
-                    <span className="iconify text-lg" data-icon="mdi:account-circle"></span>
-                  </div>
-                  <div className="user-info">
-                    <div className="user-name">{user.name || 'Utilisateur'}</div>
-                    <div className="user-role">{user.role === 'admin' ? 'Administrateur' : 'Employé'}</div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
       </aside>
     </>
   )

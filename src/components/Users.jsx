@@ -143,7 +143,7 @@ export default function Users() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-md" onClick={() => setShowForm(false)} />
 
-          <div className="relative bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden transform transition-all animate-in slide-in-from-bottom-8 duration-300">
+          <div className="relative bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-y-auto max-h-[90dvh] transform transition-all animate-in slide-in-from-bottom-8 duration-300">
             <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-200">
@@ -219,8 +219,8 @@ export default function Users() {
                     onChange={e => setForm({ ...form, store: e.target.value })}
                     className="w-full bg-gray-50 border-gray-200 border rounded-2xl p-3 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   >
-                      <option value="tamatave">Tamatave</option>
-                      <option value="majunga">Majunga</option>
+                    <option value="tamatave">Tamatave</option>
+                    <option value="majunga">Majunga</option>
                   </select>
                 </div>
               </div>

@@ -254,7 +254,7 @@ export default function Stock() {
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200"
           >
             <Plus size={18} />
-            <span>Nouveau Produit</span>
+            <span>Ajouter Produit</span>
           </button>
         </div>
       </div>
@@ -486,133 +486,133 @@ export default function Stock() {
           })}
         </div>
       </div>
-    
 
 
 
-    {
-    showForm && (
-      <div className="modal-overlay show backdrop-blur-sm" onClick={() => setShowForm(false)}>
-        <div className="modal-dialog card show !max-w-2xl" onClick={e => e.stopPropagation()}>
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-slate-800">{editingSku ? 'Modifier le produit' : 'Ajouter un produit'}</h3>
-            <button onClick={() => setShowForm(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-              <IconButton className="ghost">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              </IconButton>
-            </button>
-          </div>
 
-          <form onSubmit={(e) => { handleAdd(e); setShowForm(false); }} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">SKU</label>
-                <input name="sku" placeholder="Ex: P-010" value={form.sku} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+      {
+        showForm && (
+          <div className="modal-overlay show backdrop-blur-sm px-4 py-6" onClick={() => setShowForm(false)}>
+            <div className="modal-dialog card show !max-w-2xl w-full max-h-[90dvh] overflow-y-auto flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-slate-800">{editingSku ? 'Modifier le produit' : 'Ajouter un produit'}</h3>
+                <button onClick={() => setShowForm(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                  <IconButton className="ghost">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                  </IconButton>
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nom du produit</label>
-                <input name="name" placeholder="Nom descriptif" value={form.name} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Modèle</label>
-                <input name="model" placeholder="Ex: RES-10K" value={form.model} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Modèles compatibles</label>
-                <input name="compatibleModels" placeholder="Séparez par des virgules" value={form.compatibleModels} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Quantité</label>
-                <input name="qty" placeholder="0" value={form.qty} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Emplacement</label>
-                <input name="location" placeholder="Entrepôt A" value={form.location} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Catégorie</label>
-                <input name="category" placeholder="Composants" value={form.category} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Fournisseur</label>
-                <input name="supplier" placeholder="Fournisseur" value={form.supplier} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Prix d'achat (coût)</label>
-                <input name="cost" placeholder="0.00" value={form.cost} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Marge (%)</label>
-                <input name="margin" placeholder="0.00" value={form.margin} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
-              </div>
-              <div className="md:col-span-2 bg-indigo-50 p-3 rounded-lg flex justify-between items-center">
-                <span className="text-sm font-semibold text-indigo-700 uppercase tracking-wider">Prix de vente estimé:</span>
-                <span className="text-xl font-bold text-indigo-600 font-mono">
-                  {form.cost && form.margin ? Number(Number(form.cost) * (1 + Number(form.margin) / 100)).toLocaleString() : '-'} Ar
-                </span>
-              </div>
-            </div>
 
-            {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium">{error}</div>}
+              <form onSubmit={(e) => { handleAdd(e); setShowForm(false); }} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">SKU</label>
+                    <input name="sku" placeholder="Ex: P-010" value={form.sku} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nom du produit</label>
+                    <input name="name" placeholder="Nom descriptif" value={form.name} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Modèle</label>
+                    <input name="model" placeholder="Ex: RES-10K" value={form.model} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Modèles compatibles</label>
+                    <input name="compatibleModels" placeholder="Séparez par des virgules" value={form.compatibleModels} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Quantité</label>
+                    <input name="qty" placeholder="0" value={form.qty} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Emplacement</label>
+                    <input name="location" placeholder="Entrepôt A" value={form.location} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Catégorie</label>
+                    <input name="category" placeholder="Composants" value={form.category} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Fournisseur</label>
+                    <input name="supplier" placeholder="Fournisseur" value={form.supplier} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Prix d'achat (coût)</label>
+                    <input name="cost" placeholder="0.00" value={form.cost} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Marge (%)</label>
+                    <input name="margin" placeholder="0.00" value={form.margin} onChange={handleChange} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                  </div>
+                  <div className="md:col-span-2 bg-indigo-50 p-3 rounded-lg flex justify-between items-center">
+                    <span className="text-sm font-semibold text-indigo-700 uppercase tracking-wider">Prix de vente estimé:</span>
+                    <span className="text-xl font-bold text-indigo-600 font-mono">
+                      {form.cost && form.margin ? Number(Number(form.cost) * (1 + Number(form.margin) / 100)).toLocaleString() : '-'} Ar
+                    </span>
+                  </div>
+                </div>
 
-            <div className="pt-4 flex gap-3">
-              <button type="submit" className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 uppercase tracking-wide">
-                {editingSku ? 'Sauvegarder' : 'Ajouter au stock'}
-              </button>
-              <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
-                Annuler
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )
-  }
+                {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium">{error}</div>}
 
-  {
-    showRestockForm && (
-      <div className="modal-overlay show backdrop-blur-sm" onClick={() => setShowRestockForm(false)}>
-        <div className="modal-dialog card show !max-w-md" onClick={e => e.stopPropagation()}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-slate-800">Demander réappro</h3>
-            <button onClick={() => setShowRestockForm(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-
-          <div className="mb-6 p-3 bg-amber-50 rounded-lg border border-amber-100 flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
-              <Package size={20} />
-            </div>
-            <div>
-              <div className="text-xs text-amber-700 font-bold uppercase">Produit</div>
-              <div className="text-sm font-bold text-slate-800 uppercase">{products.find(p => p.sku === restockSku)?.name || restockSku}</div>
+                <div className="pt-4 flex gap-3">
+                  <button type="submit" className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 uppercase tracking-wide">
+                    {editingSku ? 'Sauvegarder' : 'Ajouter au stock'}
+                  </button>
+                  <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
+                    Annuler
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
+        )
+      }
 
-          <form onSubmit={handleRestockSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Quantité souhaitée</label>
-              <input type="number" name="qty" placeholder="Ex: 10" value={restockQty} onChange={e => setRestockQty(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" autoFocus />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Notes (optionnel)</label>
-              <textarea name="notes" placeholder="Détails, urgence..." value={restockNotes} onChange={e => setRestockNotes(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none min-h-[80px]" />
-            </div>
+      {
+        showRestockForm && (
+          <div className="modal-overlay show backdrop-blur-sm" onClick={() => setShowRestockForm(false)}>
+            <div className="modal-dialog card show !max-w-md" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-slate-800">Demander réappro</h3>
+                <button onClick={() => setShowRestockForm(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
 
-            <div className="pt-2 flex gap-3">
-              <button type="submit" className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-100">
-                Envoyer la demande
-              </button>
-              <button type="button" onClick={() => setShowRestockForm(false)} className="px-6 py-3 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
-                Annuler
-              </button>
+              <div className="mb-6 p-3 bg-amber-50 rounded-lg border border-amber-100 flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
+                  <Package size={20} />
+                </div>
+                <div>
+                  <div className="text-xs text-amber-700 font-bold uppercase">Produit</div>
+                  <div className="text-sm font-bold text-slate-800 uppercase">{products.find(p => p.sku === restockSku)?.name || restockSku}</div>
+                </div>
+              </div>
+
+              <form onSubmit={handleRestockSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Quantité souhaitée</label>
+                  <input type="number" name="qty" placeholder="Ex: 10" value={restockQty} onChange={e => setRestockQty(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" autoFocus />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Notes (optionnel)</label>
+                  <textarea name="notes" placeholder="Détails, urgence..." value={restockNotes} onChange={e => setRestockNotes(e.target.value)} className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none min-h-[80px]" />
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button type="submit" className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-100">
+                    Envoyer la demande
+                  </button>
+                  <button type="button" onClick={() => setShowRestockForm(false)} className="px-6 py-3 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
+                    Annuler
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
-        </div>
-      </div>
-    )
-  }
+          </div>
+        )
+      }
     </div >
   )
 }

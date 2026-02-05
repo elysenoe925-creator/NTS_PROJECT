@@ -16,10 +16,10 @@ const options = {
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'right',
+      position: window.innerWidth < 1024 ? 'bottom' : 'right',
       labels: {
-        font: { size: 12, family: 'Inter, sans-serif', weight: '500' },
-        padding: 16,
+        font: { size: window.innerWidth < 640 ? 10 : 12, family: 'Inter, sans-serif', weight: '500' },
+        padding: window.innerWidth < 640 ? 8 : 16,
         usePointStyle: true,
         pointStyle: 'circle',
         color: '#475569',
@@ -29,9 +29,9 @@ const options = {
       backgroundColor: 'rgba(15, 23, 42, 0.95)',
       borderColor: 'rgba(249, 115, 22, 0.5)',
       borderWidth: 1,
-      padding: 14,
-      titleFont: { size: 13, weight: 'bold', family: 'Inter, sans-serif' },
-      bodyFont: { size: 12, family: 'Inter, sans-serif' },
+      padding: window.innerWidth < 640 ? 10 : 14,
+      titleFont: { size: 12, weight: 'bold', family: 'Inter, sans-serif' },
+      bodyFont: { size: 11, family: 'Inter, sans-serif' },
       titleColor: '#fef3c7',
       bodyColor: '#fed7aa',
       callbacks: {
@@ -40,7 +40,7 @@ const options = {
           const value = ctx.parsed
           const total = ctx.dataset.data.reduce((a, b) => a + b, 0)
           const percentage = ((value / total) * 100).toFixed(1)
-          return `${label}: ${value} produits (${percentage}%)`
+          return `${label}: ${value} (${percentage}%)`
         },
       },
     },
