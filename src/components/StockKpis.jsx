@@ -79,9 +79,9 @@ export default function StockKpis() {
         </div>
       </div>
 
-      <div className="kpi-card kpi-low-stock">
+      <div className={`kpi-card kpi-low-stock ${kpis.lowStock > 0 ? '!bg-red-600 !text-white !shadow-lg !shadow-red-500/50 animate-pulse' : ''}`}>
         <div className="kpi-icon-wrapper">
-          <div className="kpi-icon lowstock-icon">
+          <div className={`kpi-icon lowstock-icon ${kpis.lowStock > 0 ? '!bg-white/20 !text-white' : ''}`}>
             <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3.05h16.94a2 2 0 0 0 1.71-3.05L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
               <line x1="12" y1="9" x2="12" y2="13"></line>
@@ -90,8 +90,8 @@ export default function StockKpis() {
           </div>
         </div>
         <div className="kpi-content">
-          <div className="kpi-label">Bas stock (&lt;5)</div>
-          <div className="kpi-metric">
+          <div className={`kpi-label ${kpis.lowStock > 0 ? '!text-black/90 font-bold' : ''}`}>Bas stock (&lt;5)</div>
+          <div className={`kpi-metric ${kpis.lowStock > 0 ? '!text-black' : ''}`}>
             {loading ? '…' : kpis.lowStock} <span className="kpi-unit">Alerte</span>
           </div>
         </div>

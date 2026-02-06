@@ -58,9 +58,9 @@ export default function Sidebar({ onToggleCalculator }) {
     }, 1500)
   }
 
-  // If the user is an employee, show only Sales, Stock, and Arrivals links
+  // If the user is an employee, show Dashboard, Sales, Stock, and Arrivals links
   const LINKS = user && user.role === 'employee'
-    ? ALL_LINKS.filter(l => l.href === '#/sales' || l.href === '#/stock' || l.href === '#/arrivals')
+    ? ALL_LINKS.filter(l => l.href === '#/dashboard' || l.href === '#/sales' || l.href === '#/stock' || l.href === '#/arrivals')
     : ALL_LINKS.filter(l => l.href !== '#/tracking' || (user && user.role === 'admin'))
 
   const closeMobile = () => setMobileOpen(false)

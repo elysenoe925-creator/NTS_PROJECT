@@ -7,7 +7,6 @@ import ActivityList from './ActivityList'
 import CompanyCard from './CompanyCard'
 import StockKpis from './StockKpis'
 import SalesKpis from './SalesKpis'
-import LowStockAlerts from './LowStockAlerts'
 import DecisionCenter from './DecisionCenter'
 import Orders from './Orders'
 import Sales from './Sales'
@@ -42,13 +41,15 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    // Employees are not allowed to view the main dashboard or decision center
+    // Restrictions locales si nécessaire, mais on ouvre le dashboard à tous
+    /* 
     if (user && user.role === 'employee') {
-      if (route === '#/dashboard' || route === '' || route === '#/decisions') {
-        window.location.hash = '#/sales'
-        setRoute('#/sales')
-      }
+       // Keep access to decisions restricted if needed, but allow dashboard
+       if (route === '#/decisions') {
+          window.location.hash = '#/sales'
+       }
     }
+    */
   }, [user, route])
 
   useEffect(() => {
@@ -104,7 +105,7 @@ export default function Dashboard() {
         </section>
 
         {/* Alerts Section */}
-        <LowStockAlerts />
+       
 
         {/* Charts and Activity Section */}
         <section className="widgets">
