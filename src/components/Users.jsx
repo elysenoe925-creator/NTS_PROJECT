@@ -14,6 +14,7 @@ export default function Users() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ username: '', displayName: '', password: '', role: 'employee', store: 'majunga' })
   const [error, setError] = useState('')
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -100,23 +101,23 @@ export default function Users() {
       </div>
 
       {/* Stats Dashboard */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-            <User size={24} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
+          <div className="p-2.5 sm:p-3 bg-indigo-50 text-indigo-600 rounded-xl flex-shrink-0">
+            <User size={20} className="sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Total Membres</div>
-            <div className="text-2xl font-bold text-slate-800">{users.length}</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5 truncate">Total Membres</div>
+            <div className="text-xl sm:text-2xl font-bold text-slate-800">{users.length}</div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-            <ShieldCheck size={24} />
+        <div className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow">
+          <div className="p-2.5 sm:p-3 bg-emerald-50 text-emerald-600 rounded-xl flex-shrink-0">
+            <ShieldCheck size={20} className="sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Admins</div>
-            <div className="text-2xl font-bold text-slate-800">{users.filter(u => u.role === 'admin').length}</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5 truncate">Admins</div>
+            <div className="text-xl sm:text-2xl font-bold text-slate-800">{users.filter(u => u.role === 'admin').length}</div>
           </div>
         </div>
       </div>
@@ -202,29 +203,45 @@ export default function Users() {
               </button>
             </div>
 
+
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
               <div className="flex justify-center mb-6">
                 <div className="relative group">
                   <div className="w-24 h-24 rounded-full border-4 border-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center">
+                    {uploadingAvatar ? (
+                      <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center backdrop-blur-sm">
+                        <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    ) : null}
                     {form.avatar ? (
                       <img src={form.avatar} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
                       <User size={40} className="text-slate-300" />
                     )}
                   </div>
-                  <label htmlFor="modal-avatar-upload" className="absolute bottom-0 right-0 p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full cursor-pointer shadow-lg transition-transform hover:scale-105 active:scale-95">
+                  <label htmlFor="modal-avatar-upload" className={`absolute bottom-0 right-0 p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg transition-all ${uploadingAvatar ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:scale-105 active:scale-95'}`}>
                     <span className="iconify" data-icon="mdi:camera" data-width="16"></span>
                     <input
                       type="file"
                       id="modal-avatar-upload"
                       className="hidden"
                       accept="image/*"
+                      disabled={uploadingAvatar}
                       onChange={(e) => {
                         const file = e.target.files[0]
                         if (file) {
+                          setUploadingAvatar(true)
                           const reader = new FileReader()
+                          reader.onloadstart = () => {
+                            setUploadingAvatar(true)
+                          }
                           reader.onloadend = () => {
                             setForm({ ...form, avatar: reader.result })
+                            setTimeout(() => setUploadingAvatar(false), 300)
+                          }
+                          reader.onerror = () => {
+                            setUploadingAvatar(false)
+                            setError('Erreur lors du chargement de l\'image')
                           }
                           reader.readAsDataURL(file)
                         }
