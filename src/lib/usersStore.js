@@ -78,7 +78,7 @@ export async function createUser(payload, token) {
       throw new Error(err.error || 'Create failed')
     }
     const user = await res.json()
-    await refreshUsers()
+    // WebSocket will handle the update via socketService
     return user
   } catch (e) { throw e }
 }
@@ -91,7 +91,7 @@ export async function updateUser(id, payload, token) {
       throw new Error(err.error || 'Update failed')
     }
     const user = await res.json()
-    await refreshUsers()
+    // WebSocket will handle the update via socketService
     return user
   } catch (e) { throw e }
 }
@@ -103,7 +103,7 @@ export async function deleteUser(id, token) {
       const err = await res.json().catch(() => ({ error: 'Delete failed' }))
       throw new Error(err.error || 'Delete failed')
     }
-    await refreshUsers()
+    // WebSocket will handle the update via socketService
     return true
   } catch (e) { throw e }
 }

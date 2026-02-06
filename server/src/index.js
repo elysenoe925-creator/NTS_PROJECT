@@ -7,6 +7,7 @@ const { PrismaClient } = require('@prisma/client')
 const path = require('path')
 const { Server } = require('socket.io')
 const http = require('http')
+const backupService = require('./utils/backupService')
 
 const prisma = new PrismaClient({
   datasources: {
@@ -81,6 +82,20 @@ app.post('/api/users', auth, async (req, res) => {
     if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
     const { username, password, displayName, role, store, avatar } = req.body
     if (!username || !password) return res.status(400).json({ error: 'Missing username or password' })
+
+    // Validate avatar size (max 2MB for base64 string)
+    if (avatar != null && avatar.length > 0) {
+      const sizeInBytes = Math.ceil((avatar.length * 3) / 4)
+      const sizeInMB = sizeInBytes / (1024 * 1024)
+      if (sizeInMB > 2) {
+        return res.status(400).json({ error: 'L\'image est trop grande. Taille maximale: 2MB' })
+      }
+      // Validate it's a valid base64 image
+      if (!avatar.startsWith('data:image/')) {
+        return res.status(400).json({ error: 'Format d\'image invalide' })
+      }
+    }
+
     const hash = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({ data: { username, passwordHash: hash, displayName: displayName || username, role: role || 'employee', store: store || 'all', avatar: avatar || null } })
     broadcastUsers() // Notifier tous les clients
@@ -98,10 +113,24 @@ app.put('/api/users/:id', auth, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.sub !== id) return res.status(403).json({ error: 'Forbidden' })
 
     const { username, password, displayName, role, store, avatar } = req.body
+
+    // Validate avatar size (max 2MB for base64 string)
+    if (avatar != null && avatar.length > 0) {
+      const sizeInBytes = Math.ceil((avatar.length * 3) / 4)
+      const sizeInMB = sizeInBytes / (1024 * 1024)
+      if (sizeInMB > 2) {
+        return res.status(400).json({ error: 'L\'image est trop grande. Taille maximale: 2MB' })
+      }
+      // Validate it's a valid base64 image
+      if (!avatar.startsWith('data:image/')) {
+        return res.status(400).json({ error: 'Format d\'image invalide' })
+      }
+    }
+
     const data = {}
     if (username != null) data.username = username
     if (displayName != null) data.displayName = displayName
-    if (avatar != null) data.avatar = avatar // Add avatar support
+    if (avatar != null) data.avatar = avatar
 
     // Only admin can change role or store
     if (req.user.role === 'admin') {
@@ -1575,6 +1604,63 @@ function broadcastOrders() {
     })))
   })
 }
+
+// Backup Endpoints
+app.post('/api/backups', auth, async (req, res) => {
+  try {
+    // Only admin can create backups
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+    const backup = await backupService.createBackup()
+    res.json({ success: true, backup })
+  } catch (e) {
+    console.error('Backup error:', e)
+    res.status(500).json({ error: 'Backup failed' })
+  }
+})
+
+app.get('/api/backups', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+    const backups = backupService.listBackups()
+    res.json(backups)
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to list backups' })
+  }
+})
+
+app.get('/api/backups/:filename', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+    const filePath = backupService.getBackupPath(req.params.filename)
+    if (!filePath) {
+      return res.status(404).json({ error: 'Backup not found' })
+    }
+    res.download(filePath)
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to download backup' })
+  }
+})
+
+app.delete('/api/backups/:filename', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Unauthorized' })
+    }
+    const success = backupService.deleteBackup(req.params.filename)
+    if (!success) {
+      return res.status(404).json({ error: 'Backup not found' })
+    }
+    res.json({ success: true })
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete backup' })
+  }
+})
 
 // Prediction endpoint (Delegates to Python)
 app.post('/api/predict', async (req, res) => {

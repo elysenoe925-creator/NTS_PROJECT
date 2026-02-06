@@ -11,7 +11,8 @@ const ALL_LINKS = [
   { href: '#/decisions', id: 'decisions', label: 'Décisions' },
   { href: '#/orders', id: 'orders', label: 'Commandes' },
   { href: '#/tracking', id: 'tracking', label: 'Suivi' },
-  { href: '#/user', id: 'user', label: 'Utilisateurs' }
+  { href: '#/user', id: 'user', label: 'Utilisateurs' },
+  { href: '#/settings', id: 'settings', label: 'Paramètres' }
 
 ]
 
@@ -24,6 +25,7 @@ const ICONS = {
   '#/orders': 'mdi:clipboard-list',
   '#/tracking': 'mdi:history',
   '#/user': 'mdi:user',
+  '#/settings': 'mdi:cog'
 
 }
 

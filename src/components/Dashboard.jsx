@@ -17,6 +17,7 @@ import SalesChart from './SalesChart'
 import SalesDailyChart from './SalesDailyChart'
 import ProductCategoriesChart from './ProductCategoriesChart'
 import Users from './Users'
+import Settings from './Settings'
 import ActivityTracking from './ActivityTracking'
 
 import Calculator from './Calculator'
@@ -59,6 +60,7 @@ export default function Dashboard() {
   }, [route, currentStore, setCurrentStore])
 
   const renderContent = () => {
+    if (route === '#/settings') return <Settings />
     if (route === '#/user') return <Users />
     if (route === '#/sales') return <Sales />
     if (route === '#/stock') return <Stock />

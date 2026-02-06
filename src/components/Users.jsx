@@ -7,6 +7,63 @@ import {
   User, Mail, Trash2, Edit2, X, Lock, Fingerprint
 } from 'lucide-react'
 
+// Utility function to compress images
+async function compressImage(file, maxWidth = 400, maxHeight = 400, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        // Calculate new dimensions while maintaining aspect ratio
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width)
+            width = maxWidth
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height)
+            height = maxHeight
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+
+        // Convert to base64 with compression
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality)
+
+        // Check if compressed size is still too large (> 500KB)
+        const sizeInBytes = Math.ceil((compressedDataUrl.length * 3) / 4)
+        const sizeInKB = sizeInBytes / 1024
+
+        if (sizeInKB > 500) {
+          // Try again with lower quality
+          const lowerQuality = quality * 0.7
+          if (lowerQuality < 0.3) {
+            reject(new Error('Image trop grande même après compression'))
+            return
+          }
+          compressImage(file, maxWidth, maxHeight, lowerQuality).then(resolve).catch(reject)
+        } else {
+          resolve(compressedDataUrl)
+        }
+      }
+      img.onerror = () => reject(new Error('Erreur lors du chargement de l\'image'))
+      img.src = e.target.result
+    }
+    reader.onerror = () => reject(new Error('Erreur lors de la lecture du fichier'))
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function Users() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(false)
@@ -15,6 +72,7 @@ export default function Users() {
   const [form, setForm] = useState({ username: '', displayName: '', password: '', role: 'employee', store: 'majunga' })
   const [error, setError] = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -41,6 +99,7 @@ export default function Users() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    setSubmitting(true)
     const token = getToken()
     try {
       if (editing) {
@@ -54,9 +113,11 @@ export default function Users() {
         showToast('success', 'Nouvel utilisateur créé')
       }
       setShowForm(false)
-      refreshUsers()
+      // No need to call refreshUsers() - WebSocket handles it automatically
     } catch (err) {
       setError(err.message)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -66,7 +127,7 @@ export default function Users() {
     try {
       await deleteUser(u.id, token)
       showToast('success', 'Utilisateur supprimé')
-      refreshUsers()
+      // No need to call refreshUsers() - WebSocket handles it automatically
     } catch (err) {
       showToast('error', err.message)
     }
@@ -227,23 +288,22 @@ export default function Users() {
                       className="hidden"
                       accept="image/*"
                       disabled={uploadingAvatar}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files[0]
                         if (file) {
                           setUploadingAvatar(true)
-                          const reader = new FileReader()
-                          reader.onloadstart = () => {
-                            setUploadingAvatar(true)
-                          }
-                          reader.onloadend = () => {
-                            setForm({ ...form, avatar: reader.result })
-                            setTimeout(() => setUploadingAvatar(false), 300)
-                          }
-                          reader.onerror = () => {
+                          setError('')
+                          try {
+                            // Compress image before upload
+                            const compressedImage = await compressImage(file)
+                            setForm({ ...form, avatar: compressedImage })
+                            showToast('success', 'Image compressée avec succès')
+                          } catch (err) {
+                            setError(err.message || 'Erreur lors de la compression de l\'image')
+                            showToast('error', 'un erreur est survenue lors du téléchargement')
+                          } finally {
                             setUploadingAvatar(false)
-                            setError('Erreur lors du chargement de l\'image')
                           }
-                          reader.readAsDataURL(file)
                         }
                       }}
                     />
@@ -327,15 +387,24 @@ export default function Users() {
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="flex-1 px-6 py-3.5 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all"
+                  disabled={submitting}
+                  className="flex-1 px-6 py-3.5 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-xl shadow-blue-200 transition-all active:scale-95"
+                  disabled={submitting || uploadingAvatar}
+                  className="flex-1 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-xl shadow-blue-200 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {editing ? 'Mettre à jour' : 'Créer le compte'}
+                  {submitting ? (
+                    <>
+                      <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Enregistrement...</span>
+                    </>
+                  ) : (
+                    <span>{editing ? 'Mettre à jour' : 'Créer le compte'}</span>
+                  )}
                 </button>
               </div>
             </form>
