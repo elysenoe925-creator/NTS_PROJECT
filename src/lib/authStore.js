@@ -2,7 +2,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000'
 const STORAGE_KEY = 'gsm_auth_v1'
 
 function writeSession(obj) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)) } catch (e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)) } catch (e) { }
 }
 
 function readSession() {
@@ -11,7 +11,7 @@ function readSession() {
 
 function notifyListeners(user) {
   console.log('notifyListeners called with:', user)
-  
+
   // Importer dynamiquement pour éviter les dépendances circulaires
   import('./AuthContext.jsx').then(module => {
     if (module.notifyAuthContext) {
@@ -19,7 +19,7 @@ function notifyListeners(user) {
       module.notifyAuthContext(user)
     }
   }).catch(e => console.error('Error notifying auth context:', e))
-  
+
   // Aussi dispatcher l'événement pour la rétrocompatibilité
   const ev = new CustomEvent('auth-changed', { detail: user })
   window.dispatchEvent(ev)
@@ -32,7 +32,7 @@ export function getToken() { const s = readSession(); return s ? s.token : null 
 export async function login(username, password) {
   const res = await fetch(API_BASE + '/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) })
   if (!res.ok) {
-    const err = await res.json().catch(()=>({ error: 'Login failed' }))
+    const err = await res.json().catch(() => ({ error: 'Login failed' }))
     throw new Error(err.error || 'Login failed')
   }
   const data = await res.json()
@@ -45,8 +45,34 @@ export async function login(username, password) {
   return session.user
 }
 
+export async function updateProfile(id, updates) {
+  const token = getToken()
+  if (!token) throw new Error('Not authenticated')
+
+  const res = await fetch(API_BASE + `/api/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify(updates)
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Update failed' }))
+    throw new Error(err.error || 'Update failed')
+  }
+
+  const updatedUser = await res.json()
+  const session = readSession()
+  if (session && session.user && session.user.id === updatedUser.id) {
+    // Merge updates while keeping token
+    const newSession = { ...session, user: { ...session.user, ...updatedUser } }
+    writeSession(newSession)
+    notifyListeners(newSession.user)
+  }
+  return updatedUser
+}
+
 export function logout() {
-  try { localStorage.removeItem(STORAGE_KEY) } catch (e) {}
+  try { localStorage.removeItem(STORAGE_KEY) } catch (e) { }
   notifyListeners(null)
 }
 
@@ -55,12 +81,12 @@ export function subscribeAuth(cb) {
   // S'abonner à l'événement pour la rétrocompatibilité
   const handler = (e) => cb(e.detail)
   window.addEventListener('auth-changed', handler)
-  
+
   const unsub = () => {
     console.log('Unsubscribing from auth-changed')
     window.removeEventListener('auth-changed', handler)
   }
-  
+
   return unsub
 }
 

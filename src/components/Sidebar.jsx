@@ -158,29 +158,70 @@ export default function Sidebar({ onToggleCalculator }) {
             {!isCollapsed && <span className="nav-label">Calculatrice</span>}
           </a>
 
-          {/* Logout Button */}
-          {user && (
-            <a
-              href="#"
-              className={`logout-nav-item ${loadingLogout ? 'loading' : ''}`}
-              onClick={(e) => {
-                e.preventDefault()
-                handleLogout()
-                closeMobile()
-              }}
-              title={isCollapsed ? 'Déconnexion' : 'Déconnexion'}
-            >
-              <span className="link-icon-wrapper">
-                {loadingLogout ? (
-                  <span className="spinner-small" style={{ width: 18, height: 18 }}></span>
-                ) : (
-                  <span className="iconify link-icon" data-icon="mdi:logout" data-inline="false" aria-hidden="true"></span>
-                )}
-              </span>
-              {!isCollapsed && <span className="nav-label">{loadingLogout ? 'Déconnexion...' : 'Déconnexion'}</span>}
-            </a>
-          )}
         </nav>
+
+        {/* User Profile Section */}
+        {user && (
+          <div className={`p-4 border-t border-slate-200 mt-auto ${isCollapsed ? 'flex justify-center' : ''}`}>
+            <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
+              <div className="relative group">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center cursor-pointer">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.displayName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-lg font-bold text-slate-500">{user.displayName?.charAt(0).toUpperCase()}</span>
+                  )}
+                  {/* Upload overlay */}
+                  <label htmlFor="avatar-upload" className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center cursor-pointer transition-opacity opacity-0 group-hover:opacity-100">
+                    <span className="iconify text-white text-xs" data-icon="mdi:camera"></span>
+                  </label>
+                  <input
+                    type="file"
+                    id="avatar-upload"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0]
+                      if (file) {
+                        const reader = new FileReader()
+                        reader.onloadend = async () => {
+                          try {
+                            const { updateProfile } = await import('../lib/authStore')
+                            await updateProfile(user.id, { avatar: reader.result })
+                          } catch (err) {
+                            alert('Erreur lors de la mise à jour de la photo: ' + err.message)
+                          }
+                        }
+                        reader.readAsDataURL(file)
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-slate-800 truncate">{user.displayName}</div>
+                  <div className="text-xs text-slate-500 truncate capitalize">{user.role}</div>
+                </div>
+              )}
+
+              {!isCollapsed && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleLogout()
+                    closeMobile()
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Déconnexion"
+                >
+                  <span className="iconify text-xl" data-icon="mdi:logout"></span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
       </aside>
     </>

@@ -15,7 +15,7 @@ function read() {
 }
 
 function write(list) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)) } catch (e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)) } catch (e) { }
 }
 
 function dispatch(list) {
@@ -60,11 +60,11 @@ export async function refreshUsers() {
     }
     const data = await res.json()
     // normalize to local format (string ids)
-    const mapped = data.map(u => ({ id: String(u.id), username: u.username, displayName: u.displayName, role: u.role, store: u.store }))
+    const mapped = data.map(u => ({ id: String(u.id), username: u.username, displayName: u.displayName, role: u.role, store: u.store, avatar: u.avatar }))
     write(mapped)
     dispatch(mapped)
     return mapped
-  } catch (e) { 
+  } catch (e) {
     console.error('Error refreshing users:', e)
     return []
   }
@@ -74,7 +74,7 @@ export async function createUser(payload, token) {
   try {
     const res = await fetch(API_BASE + '/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(payload) })
     if (!res.ok) {
-      const err = await res.json().catch(()=>({ error: 'Create failed' }))
+      const err = await res.json().catch(() => ({ error: 'Create failed' }))
       throw new Error(err.error || 'Create failed')
     }
     const user = await res.json()
@@ -87,7 +87,7 @@ export async function updateUser(id, payload, token) {
   try {
     const res = await fetch(API_BASE + '/api/users/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(payload) })
     if (!res.ok) {
-      const err = await res.json().catch(()=>({ error: 'Update failed' }))
+      const err = await res.json().catch(() => ({ error: 'Update failed' }))
       throw new Error(err.error || 'Update failed')
     }
     const user = await res.json()
@@ -100,7 +100,7 @@ export async function deleteUser(id, token) {
   try {
     const res = await fetch(API_BASE + '/api/users/' + encodeURIComponent(id), { method: 'DELETE', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
     if (!res.ok) {
-      const err = await res.json().catch(()=>({ error: 'Delete failed' }))
+      const err = await res.json().catch(() => ({ error: 'Delete failed' }))
       throw new Error(err.error || 'Delete failed')
     }
     await refreshUsers()

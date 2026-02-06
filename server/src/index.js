@@ -51,7 +51,8 @@ const corsOptions = {
 }
 
 app.use(cors(corsOptions))
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
 // Simple auth - returns JWT
 app.post('/api/auth/login', async (req, res) => {
@@ -62,7 +63,7 @@ app.post('/api/auth/login', async (req, res) => {
   const ok = await bcrypt.compare(password, user.passwordHash)
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' })
   const token = jwt.sign({ sub: user.id, role: user.role, store: user.store }, JWT_SECRET, { expiresIn: '8h' })
-  res.json({ token, user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role, store: user.store } })
+  res.json({ token, user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role, store: user.store, avatar: user.avatar } })
 })
 
 // User management endpoints (admin only)
@@ -78,12 +79,12 @@ app.get('/api/users', auth, async (req, res) => {
 app.post('/api/users', auth, async (req, res) => {
   try {
     if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
-    const { username, password, displayName, role, store } = req.body
+    const { username, password, displayName, role, store, avatar } = req.body
     if (!username || !password) return res.status(400).json({ error: 'Missing username or password' })
     const hash = await bcrypt.hash(password, 10)
-    const user = await prisma.user.create({ data: { username, passwordHash: hash, displayName: displayName || username, role: role || 'employee', store: store || 'all' } })
+    const user = await prisma.user.create({ data: { username, passwordHash: hash, displayName: displayName || username, role: role || 'employee', store: store || 'all', avatar: avatar || null } })
     broadcastUsers() // Notifier tous les clients
-    res.json({ id: user.id, username: user.username, displayName: user.displayName, role: user.role, store: user.store })
+    res.json({ id: user.id, username: user.username, displayName: user.displayName, role: user.role, store: user.store, avatar: user.avatar })
   } catch (e) {
     if (e.code === 'P2002') return res.status(409).json({ error: 'Username already exists' })
     res.status(500).json({ error: e.message })
@@ -92,18 +93,26 @@ app.post('/api/users', auth, async (req, res) => {
 
 app.put('/api/users/:id', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
     const id = Number(req.params.id)
-    const { username, password, displayName, role, store } = req.body
+    // Allow admin or self
+    if (req.user.role !== 'admin' && req.user.sub !== id) return res.status(403).json({ error: 'Forbidden' })
+
+    const { username, password, displayName, role, store, avatar } = req.body
     const data = {}
     if (username != null) data.username = username
     if (displayName != null) data.displayName = displayName
-    if (role != null) data.role = role
-    if (store != null) data.store = store
+    if (avatar != null) data.avatar = avatar // Add avatar support
+
+    // Only admin can change role or store
+    if (req.user.role === 'admin') {
+      if (role != null) data.role = role
+      if (store != null) data.store = store
+    }
+
     if (password != null) data.passwordHash = await bcrypt.hash(password, 10)
     const user = await prisma.user.update({ where: { id }, data })
     broadcastUsers() // Notifier tous les clients
-    res.json({ id: user.id, username: user.username, displayName: user.displayName, role: user.role, store: user.store })
+    res.json({ id: user.id, username: user.username, displayName: user.displayName, role: user.role, store: user.store, avatar: user.avatar })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
@@ -1481,7 +1490,7 @@ io.on('connection', (socket) => {
 
 // Fonction pour émettre des changements à tous les clients
 function broadcastUsers() {
-  prisma.user.findMany({ select: { id: true, username: true, displayName: true, role: true, store: true } }).then(users => {
+  prisma.user.findMany({ select: { id: true, username: true, displayName: true, role: true, store: true, avatar: true } }).then(users => {
     io.emit('users:updated', users)
   })
 }

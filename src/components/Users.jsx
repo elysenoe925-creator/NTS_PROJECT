@@ -28,10 +28,10 @@ export default function Users() {
   const handleOpenForm = (u = null) => {
     if (u) {
       setEditing(u)
-      setForm({ username: u.username, displayName: u.displayName || '', password: '', role: u.role || 'employee', store: u.store || 'majunga' })
+      setForm({ username: u.username, displayName: u.displayName || '', password: '', role: u.role || 'employee', store: u.store || 'majunga', avatar: u.avatar || null })
     } else {
       setEditing(null)
-      setForm({ username: '', displayName: '', password: '', role: 'employee', store: 'majunga' })
+      setForm({ username: '', displayName: '', password: '', role: 'employee', store: 'majunga', avatar: null })
     }
     setError('')
     setShowForm(true)
@@ -43,7 +43,7 @@ export default function Users() {
     const token = getToken()
     try {
       if (editing) {
-        const payload = { displayName: form.displayName, role: form.role, store: form.store }
+        const payload = { displayName: form.displayName, role: form.role, store: form.store, avatar: form.avatar }
         if (form.password) payload.password = form.password
         await updateUser(editing.id, payload, token)
         showToast('success', 'Profil mis à jour')
@@ -87,6 +87,28 @@ export default function Users() {
         </div>
       </div>
 
+      {/* Stats Dashboard */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+            <User size={24} />
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Total Membres</div>
+            <div className="text-2xl font-bold text-slate-800">{users.length}</div>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+            <ShieldCheck size={24} />
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Admins</div>
+            <div className="text-2xl font-bold text-slate-800">{users.filter(u => u.role === 'admin').length}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Grid de Cartes Utilisateurs */}
       {loading && users.length === 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
@@ -95,43 +117,53 @@ export default function Users() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {users.map(u => (
-            <div key={u.id} className="group bg-white border border-gray-200 rounded-2xl p-6 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 relative">
-
-              <div className="flex justify-between items-start mb-4">
-                <div className={`p-3 rounded-2xl shadow-inner ${u.role === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'bg-blue-50 text-blue-600'
-                  }`}>
-                  {u.role === 'admin' ? <ShieldCheck size={28} /> : <User size={28} />}
-                </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleOpenForm(u)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                    <Edit2 size={16} />
+            <div key={u.id} className="group bg-white border border-slate-200 rounded-3xl p-6 hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-10">
+                <button onClick={() => handleOpenForm(u)} className="p-2 bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl shadow-sm border border-slate-100 transition-colors">
+                  <Edit2 size={16} />
+                </button>
+                {u.username !== 'admin' && (
+                  <button onClick={() => handleDelete(u)} className="p-2 bg-white text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl shadow-sm border border-slate-100 transition-colors">
+                    <Trash2 size={16} />
                   </button>
-                  {u.username !== 'admin' && (
-                    <button onClick={() => handleDelete(u)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
 
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-gray-900 truncate">{u.displayName || u.username}</h3>
-                <div className="flex items-center gap-1.5 text-sm text-gray-400 font-medium">
-                  <Mail size={14} />
-                  <span>{u.username}</span>
+              <div className="flex flex-col items-center text-center space-y-4 pt-2">
+                <div className="relative">
+                  <div className={`w-24 h-24 rounded-full border-4 ${u.role === 'admin' ? 'border-indigo-100' : 'border-slate-100'} shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center`}>
+                    {u.avatar ? (
+                      <img src={u.avatar} alt={u.displayName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className={`text-3xl font-bold ${u.role === 'admin' ? 'text-indigo-300' : 'text-slate-300'}`}>
+                        {u.displayName?.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className={`absolute bottom-1 right-1 p-1.5 rounded-full border-2 border-white ${u.role === 'admin' ? 'bg-indigo-500 text-white' : 'bg-slate-400 text-white'}`}>
+                    {u.role === 'admin' ? <ShieldCheck size={12} /> : <User size={12} />}
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-6 flex flex-wrap gap-2">
-                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border shadow-sm ${u.role === 'admin' ? 'bg-indigo-600 text-white border-indigo-600' :
-                  u.role === 'manager' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                    'bg-gray-50 text-gray-600 border-gray-200'
-                  }`}>
-                  {u.role}
-                </span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-white border border-gray-200 text-gray-500 shadow-sm">
-                  <MapPin size={10} /> {u.store}
-                </span>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-slate-800">{u.displayName || u.username}</h3>
+                  <div className="flex items-center justify-center gap-1.5 text-sm text-slate-400 font-medium bg-slate-50 py-1 px-3 rounded-full mx-auto w-fit">
+                    <Mail size={12} />
+                    <span>{u.username}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-2 w-full pt-2 border-t border-slate-50">
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl border ${u.role === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                    u.role === 'manager' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      'bg-slate-50 text-slate-600 border-slate-200'
+                    }`}>
+                    {u.role}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-500 shadow-sm">
+                    <MapPin size={10} /> {u.store}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -159,6 +191,37 @@ export default function Users() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
+              <div className="flex justify-center mb-6">
+                <div className="relative group">
+                  <div className="w-24 h-24 rounded-full border-4 border-slate-100 shadow-sm overflow-hidden bg-slate-50 flex items-center justify-center">
+                    {form.avatar ? (
+                      <img src={form.avatar} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={40} className="text-slate-300" />
+                    )}
+                  </div>
+                  <label htmlFor="modal-avatar-upload" className="absolute bottom-0 right-0 p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full cursor-pointer shadow-lg transition-transform hover:scale-105 active:scale-95">
+                    <span className="iconify" data-icon="mdi:camera" data-width="16"></span>
+                    <input
+                      type="file"
+                      id="modal-avatar-upload"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0]
+                        if (file) {
+                          const reader = new FileReader()
+                          reader.onloadend = () => {
+                            setForm({ ...form, avatar: reader.result })
+                          }
+                          reader.readAsDataURL(file)
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="sm:col-span-2 space-y-1.5">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Nom d'affichage</label>
