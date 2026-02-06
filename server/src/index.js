@@ -71,7 +71,7 @@ app.get('/api/users', auth, async (req, res) => {
   try {
     // only admin can list users
     if (req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' })
-    const users = await prisma.user.findMany({ select: { id: true, username: true, displayName: true, role: true, store: true } })
+    const users = await prisma.user.findMany({ select: { id: true, username: true, displayName: true, role: true, store: true, avatar: true } })
     res.json(users)
   } catch (e) { res.status(500).json({ error: e.message }) }
 })

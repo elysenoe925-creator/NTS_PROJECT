@@ -59,6 +59,18 @@ export default function Users() {
     }
   }
 
+  async function handleDelete(u) {
+    if (!confirm(`Supprimer ${u.displayName || u.username} ?`)) return
+    const token = getToken()
+    try {
+      await deleteUser(u.id, token)
+      showToast('success', 'Utilisateur supprimé')
+      refreshUsers()
+    } catch (err) {
+      showToast('error', err.message)
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-15 p-4 sm:p-6 lg:p-8 space-y-8 bg-gray-50/50 min-h-screen">
 
