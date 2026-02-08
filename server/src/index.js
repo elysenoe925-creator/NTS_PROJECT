@@ -9,6 +9,9 @@ const { Server } = require('socket.io')
 const http = require('http')
 const backupService = require('./utils/backupService')
 
+// Activer le système de backups automatiques planifiés
+require('./scheduledBackup')
+
 const prisma = new PrismaClient({
   datasources: {
     db: {
@@ -206,11 +209,18 @@ app.get('/api/products', async (req, res) => {
       id: p.id, sku: p.sku, name: p.name, model: p.model, compatibleModels: p.compatibleModels ? p.compatibleModels.split(',') : [],
       price: calculatedPrice, cost: cost, margin: margin,
       location: p.location, category: p.category, supplier: p.supplier,
-      stockByStore: stockByStore, reorderRequestedByStore: reorderRequestedByStore, qty
+      stockByStore: stockByStore, reorderRequestedByStore: reorderRequestedByStore, qty,
+      alertThreshold: p.alertThreshold
     }
   })
-  // If store provided, filter out products that don't have an explicit entry for that store (behaviour matching frontend expectation)
-  const result = store ? mapped.filter(p => p.stockByStore && Object.prototype.hasOwnProperty.call(p.stockByStore, store)) : mapped
+  // Global View or Store-specific view: filter out products that don't have an explicit entry for that store or any store
+  const result = mapped.filter(p => {
+    if (store) {
+      return p.stockByStore && Object.prototype.hasOwnProperty.call(p.stockByStore, store)
+    }
+    // Global View: show only products that exist in at least one store
+    return p.stockByStore && Object.keys(p.stockByStore).length > 0
+  })
   res.json(result)
 })
 
@@ -227,7 +237,7 @@ app.post('/api/products', auth, async (req, res) => {
         sku: data.sku,
         name: data.name,
         model: data.model || null,
-        compatibleModels: (data.compatibleModels || []).join ? (data.compatibleModels.join(',')) : (data.compatibleModels || null),
+        compatibleModels: Array.isArray(data.compatibleModels) ? data.compatibleModels.join(',') : (data.compatibleModels || null),
         cost: cost,
         margin: margin,
         price: calculatedPrice,
@@ -242,7 +252,12 @@ app.post('/api/products', auth, async (req, res) => {
         await prisma.stock.create({ data: { productId: p.id, store: s.store, qty: Number(s.qty || 0), cost: cost, margin: margin } })
       }
     }
-    broadcastProducts() // Notifier tous les clients
+
+    // Optimized broadcast
+    const productWithStocks = await prisma.product.findUnique({ where: { id: p.id }, include: { stocks: true } })
+    const formatted = formatProductForClient(productWithStocks)
+    broadcastProductChange('create', formatted)
+
     res.json({ ok: true, product: p })
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
@@ -305,7 +320,11 @@ app.put('/api/products/:sku', auth, async (req, res) => {
       }
     }
 
-    broadcastProducts() // Notifier tous les clients
+    // Optimized broadcast
+    const updatedProduct = await prisma.product.findUnique({ where: { id: product.id }, include: { stocks: true } })
+    const formatted = formatProductForClient(updatedProduct)
+    broadcastProductChange('update', formatted, store) // Broadcast to specific store if applicable
+
     res.json({ ok: true })
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
@@ -376,7 +395,11 @@ app.post('/api/products/:sku/reorder', auth, async (req, res) => {
       }
     })
 
-    broadcastProducts()
+    // Optimized broadcast
+    const updatedProduct = await prisma.product.findUnique({ where: { id: product.id }, include: { stocks: true } })
+    const formatted = formatProductForClient(updatedProduct)
+    broadcastProductChange('update', formatted, targetStore)
+
     broadcastOrders()
     broadcastLogs()
 
@@ -405,29 +428,24 @@ app.post('/api/products/:sku/cancel-reorder', auth, async (req, res) => {
       await prisma.stock.update({ where: { id: existingStock.id }, data: { reorderRequested: false } })
     }
 
-    // 2. Find and delete PENDING auto-created orders for this product/store
-    // We look for orders that:
-    // - are for this store
-    // - are pending
-    // - have reference number starting with REQ-
-    // - contain an item for this product
-    const pendingRequests = await prisma.order.findMany({
+    // 2. Find and delete pending auto-request orders for this product/store
+    // Note: The original code had `order.id` which was undefined.
+    // We need to find the relevant orders first.
+    const pendingOrders = await prisma.order.findMany({
       where: {
-        store: targetStore,
         status: 'pending',
-        referenceNumber: { startsWith: 'REQ-' },
+        store: targetStore,
+        referenceNumber: { startsWith: 'REQ-' }, // Assuming 'REQ-' prefix for auto-requests
         items: {
-          some: { productId: product.id }
+          some: {
+            productId: product.id
+          }
         }
       },
-      include: { items: true }
+      select: { id: true }
     })
 
-    // For each found order, we should theoretically only remove THIS item if there are multiple, 
-    // but our current logic creates one order per request. Safe to delete the whole order if it matches the pattern.
-    // However, to be extra safe, let's just delete the order if it was created as a single-product request.
-    for (const order of pendingRequests) {
-      // Delete order items first (cascade usually handles this but let's be explicit or rely on deletion)
+    for (const order of pendingOrders) {
       await prisma.orderItem.deleteMany({ where: { orderId: order.id } })
       await prisma.order.delete({ where: { id: order.id } })
     }
@@ -441,7 +459,11 @@ app.post('/api/products/:sku/cancel-reorder', auth, async (req, res) => {
       }
     })
 
-    broadcastProducts()
+    // Optimized broadcast
+    const updatedProduct = await prisma.product.findUnique({ where: { id: product.id }, include: { stocks: true } })
+    const formatted = formatProductForClient(updatedProduct)
+    broadcastProductChange('update', formatted, targetStore)
+
     broadcastOrders()
     broadcastLogs()
 
@@ -453,19 +475,56 @@ app.post('/api/products/:sku/cancel-reorder', auth, async (req, res) => {
 })
 
 
-// Delete product and related stocks/sales
+// Delete product or remove from specific store
 app.delete('/api/products/:sku', auth, async (req, res) => {
   const sku = req.params.sku
+  const store = req.query.store
   try {
     const product = await prisma.product.findUnique({ where: { sku } })
     if (!product) return res.status(404).json({ error: 'Product not found' })
-    // delete stocks and sales first
-    await prisma.stock.deleteMany({ where: { productId: product.id } })
-    await prisma.sale.deleteMany({ where: { productId: product.id } })
-    await prisma.product.delete({ where: { id: product.id } })
+
+    if (store && store !== 'all') {
+      // Si une boutique est spécifiée, on supprime seulement l'entrée de stock pour cette boutique
+      // Cela "retire" le produit de la boutique sans le supprimer globalement
+      await prisma.stock.deleteMany({
+        where: {
+          productId: product.id,
+          store: store
+        }
+      })
+
+      // Log de l'action spécifique à la boutique
+      await prisma.actionLog.create({
+        data: {
+          userId: req.user.sub,
+          action: 'RETRAIT_PRODUIT_BOUTIQUE',
+          description: `Produit ${sku} retiré de la boutique ${store}`,
+          store: store
+        }
+      })
+    } else {
+      // Suppression globale (seulement si pas de store spécifié ou store='all')
+      // Note: On évite de supprimer les records de vente (Sale) pour préserver l'historique comptable
+      // Mais on supprime les entrées de stock
+      await prisma.stock.deleteMany({ where: { productId: product.id } })
+      await prisma.product.delete({ where: { id: product.id } })
+
+      await prisma.actionLog.create({
+        data: {
+          userId: req.user.sub,
+          action: 'SUPPRESSION_PRODUIT_GLOBAL',
+          description: `Produit ${sku} supprimé globalement`,
+          store: 'all'
+        }
+      })
+    }
+
     broadcastProducts() // Notifier tous les clients
     res.json({ ok: true })
-  } catch (e) { res.status(500).json({ error: e.message }) }
+  } catch (e) {
+    console.error('Error during product deletion:', e)
+    res.status(500).json({ error: e.message })
+  }
 })
 
 // Get stock rows for a store
@@ -1044,10 +1103,28 @@ app.post('/api/sales', auth, async (req, res) => {
       })
 
       return sale
+      return sale
     })
 
-    broadcastProducts() // Notify stock change
-    broadcastSales() // Notify sales update
+    // Optimized broadcasts
+    // 1. Notify stock change for the product
+    const updatedProduct = await prisma.product.findUnique({ where: { id: result.productId }, include: { stocks: true } })
+    const formattedProduct = formatProductForClient(updatedProduct)
+    broadcastProductChange('update', formattedProduct, store)
+
+    // 2. Notify new sale
+    const formattedSale = {
+      id: result.id,
+      productId: result.productId,
+      sku: formattedProduct.sku,
+      model: formattedProduct.model,
+      qty: result.qty,
+      total: result.total,
+      client: result.client,
+      date: result.date,
+      store: result.store
+    }
+    broadcastSaleChange('create', formattedSale, store)
 
     // Return formatted sale for frontend
     res.json({ ok: true, sale: result })
@@ -1298,98 +1375,123 @@ app.post('/api/arrivals', auth, async (req, res) => {
   }
 })
 
-// Confirm arrival (change status to confirmed and update stock)
+// Confirm arrival (change status to confirmed and update stock) - TRANSACTIONAL
 app.put('/api/arrivals/:id/confirm', auth, async (req, res) => {
   try {
     const id = Number(req.params.id)
-    const arrival = await prisma.arrival.findUnique({
-      where: { id },
-      include: { items: true, user: { select: { id: true, username: true, displayName: true } } }
-    })
-    if (!arrival) return res.status(404).json({ error: 'Arrival not found' })
-    if (arrival.status !== 'pending') return res.status(400).json({ error: 'Arrival is not in pending status' })
 
-    // Update stock for each item with weighted average cost calculation
-    for (const item of arrival.items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId }
+    // Execute all operations in a single atomic transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Fetch arrival with items
+      const arrival = await tx.arrival.findUnique({
+        where: { id },
+        include: { items: true, user: { select: { id: true, username: true, displayName: true } } }
       })
 
-      const stockRow = await prisma.stock.findUnique({
-        where: { productId_store: { productId: item.productId, store: arrival.store } }
-      }).catch(() => null)
-
-      // Calculate weighted average cost: (old_cost * old_qty + new_cost * new_qty) / (old_qty + new_qty)
-      let newCost = item.costPrice
-      if (stockRow && stockRow.cost != null && stockRow.qty > 0) {
-        newCost = (Number(stockRow.cost) * stockRow.qty + Number(item.costPrice) * item.qtyReceived) / (stockRow.qty + item.qtyReceived)
+      if (!arrival) throw new Error('Arrival not found')
+      if (arrival.status !== 'pending') {
+        throw new Error('Arrival is not in pending status')
       }
 
-      // Calculate new price based on margin: price = cost * (1 + margin/100)
-      let newPrice = product.price
-      if (newCost != null) {
-        const margin = stockRow?.margin != null ? Number(stockRow.margin) : (product.margin != null ? Number(product.margin) : 0)
-        newPrice = newCost * (1 + margin / 100)
-      }
+      // 2. Update stock for each item with weighted average cost calculation
+      for (const item of arrival.items) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId }
+        })
 
-      if (stockRow) {
-        await prisma.stock.update({
-          where: { id: stockRow.id },
+        if (!product) throw new Error(`Product not found: ${item.productId}`)
+
+        const stockRow = await tx.stock.findUnique({
+          where: { productId_store: { productId: item.productId, store: arrival.store } }
+        }).catch(() => null)
+
+        // Calculate weighted average cost: (old_cost * old_qty + new_cost * new_qty) / (old_qty + new_qty)
+        let newCost = item.costPrice
+        if (stockRow && stockRow.cost != null && stockRow.qty > 0) {
+          newCost = (Number(stockRow.cost) * stockRow.qty + Number(item.costPrice) * item.qtyReceived) / (stockRow.qty + item.qtyReceived)
+        }
+
+        // Calculate new price based on margin: price = cost * (1 + margin/100)
+        let newPrice = product.price
+        if (newCost != null) {
+          const margin = stockRow?.margin != null ? Number(stockRow.margin) : (product.margin != null ? Number(product.margin) : 0)
+          newPrice = newCost * (1 + margin / 100)
+        }
+
+        if (stockRow) {
+          await tx.stock.update({
+            where: { id: stockRow.id },
+            data: {
+              qty: stockRow.qty + item.qtyReceived,
+              cost: newCost,
+              margin: stockRow.margin != null ? stockRow.margin : product.margin,
+              reorderRequested: false // Clear reorder request flag
+            }
+          })
+        } else {
+          // Create new stock row if it doesn't exist
+          await tx.stock.create({
+            data: {
+              productId: item.productId,
+              store: arrival.store,
+              qty: item.qtyReceived,
+              cost: newCost,
+              margin: product.margin,
+              reorderRequested: false
+            }
+          })
+        }
+
+        // Update product price (global)
+        await tx.product.update({
+          where: { id: item.productId },
           data: {
-            qty: stockRow.qty + item.qtyReceived,
-            cost: newCost,
-            margin: stockRow.margin != null ? stockRow.margin : product.margin,
-            reorderRequested: false // Clear reorder request flag
+            price: newPrice,
+            cost: newCost
           }
         })
-      } else {
-        // Create new stock row if it doesn't exist
-        await prisma.stock.create({
-          data: {
-            productId: item.productId,
-            store: arrival.store,
-            qty: item.qtyReceived,
-            cost: newCost,
-            margin: product.margin,
-            reorderRequested: false
-          }
-        })
       }
 
-      // Update product price (global)
-      await prisma.product.update({
-        where: { id: item.productId },
+      // 3. Update arrival status
+      const updated = await tx.arrival.update({
+        where: { id },
+        data: { status: 'confirmed' },
+        include: { items: { include: { product: true } }, user: { select: { id: true, username: true, displayName: true } } }
+      })
+
+      // 4. Log the action (inside transaction for consistency)
+      await tx.actionLog.create({
         data: {
-          price: newPrice,
-          cost: newCost
+          userId: req.user.sub,
+          action: 'ARRIVAL_CONFIRMED',
+          description: `Arrivage confirmé: ${arrival.referenceNumber} - Stock augmenté`,
+          store: arrival.store
         }
       })
-    }
 
-    // Update arrival status
-    const updated = await prisma.arrival.update({
-      where: { id },
-      data: { status: 'confirmed' },
-      include: { items: { include: { product: true } }, user: { select: { id: true, username: true, displayName: true } } }
+      return updated
     })
 
-    // Log the action
-    await prisma.actionLog.create({
-      data: {
-        userId: req.user.sub,
-        action: 'ARRIVAL_CONFIRMED',
-        description: `Arrivage confirmé: ${arrival.referenceNumber} - Stock augmenté`,
-        store: arrival.store
-      }
-    })
-
+    // Broadcast updates after successful transaction
     broadcastArrivals()
     broadcastProducts()
     broadcastLogs()
 
     res.json({ ok: true })
   } catch (e) {
-    console.error('Error confirming arrival:', e)
+    console.error('Erreur lors de la confirmation de l\'arrivage:', e)
+
+    // Provide more specific error messages
+    if (e.message.includes('Arrival not found')) {
+      return res.status(404).json({ error: 'Arrivage introuvable' })
+    }
+    if (e.message.includes('not in pending status')) {
+      return res.status(400).json({ error: 'L\'arrivage n\'est pas en attente de confirmation' })
+    }
+    if (e.message.includes('Product not found')) {
+      return res.status(404).json({ error: 'Produit introuvable dans l\'arrivage' })
+    }
+
     res.status(500).json({ error: e.message })
   }
 })
@@ -1442,9 +1544,23 @@ io.use((socket, next) => {
   }
 })
 
-// Connection handler
+// Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log(`✓ Client connected: ${socket.id} (user: ${socket.user.sub})`)
+  console.log(`✓ Client connected: ${socket.id}, User: ${socket.user?.username}, Store: ${socket.user?.store}`)
+
+  // Join user to their store room for targeted broadcasts
+  if (socket.user?.store) {
+    socket.join(`store:${socket.user.store}`)
+    console.log(`  → Joined room: store:${socket.user.store}`)
+  }
+
+  // Admin users join all store rooms and a special 'all' room
+  if (socket.user?.role === 'admin') {
+    socket.join('store:all')
+    socket.join('store:majunga')
+    socket.join('store:tamatave')
+    console.log(`  → Admin joined rooms: store:all, store:majunga, store:tamatave`)
+  }
 
   // Envoyer une synchronisation complète au connexion
   socket.on('sync:request', async () => {
@@ -1465,19 +1581,25 @@ io.on('connection', (socket) => {
 
       socket.emit('sync:full', {
         users,
-        products: products.map(p => ({
-          id: p.id,
-          sku: p.sku,
-          name: p.name,
-          model: p.model,
-          compatibleModels: p.compatibleModels ? p.compatibleModels.split(',') : [],
-          price: p.price,
-          cost: p.cost,
-          location: p.location,
-          category: p.category,
-          supplier: p.supplier,
-          stockByStore: (p.stocks || []).reduce((acc, s) => { acc[s.store] = s.qty; return acc }, {})
-        })),
+        products: products
+          .map(p => {
+            const stockByStore = (p.stocks || []).reduce((acc, s) => { acc[s.store] = s.qty; return acc }, {})
+            return {
+              id: p.id,
+              sku: p.sku,
+              name: p.name,
+              model: p.model,
+              compatibleModels: p.compatibleModels ? p.compatibleModels.split(',') : [],
+              price: p.price,
+              cost: p.cost,
+              location: p.location,
+              category: p.category,
+              supplier: p.supplier,
+              stockByStore,
+              alertThreshold: p.alertThreshold
+            }
+          })
+          .filter(p => Object.keys(p.stockByStore).length > 0),
         orders: orders.map(o => ({
           id: o.id,
           referenceNumber: o.referenceNumber,
@@ -1524,22 +1646,65 @@ function broadcastUsers() {
   })
 }
 
+// Optimized: Broadcast delta changes for products
+function broadcastProductChange(action, product, storeId = null) {
+  const event = {
+    action,  // 'create', 'update', 'delete'
+    product,
+    timestamp: Date.now()
+  }
+
+  // Broadcast to specific store or all
+  if (storeId) {
+    io.to(`store:${storeId}`).emit('product:changed', event)
+    io.to('store:all').emit('product:changed', event)  // Also to admins
+  } else {
+    io.emit('product:changed', event)
+  }
+
+  // Keep legacy broadcast for compatibility during transition
+  broadcastProducts()
+}
+
 function broadcastProducts() {
   prisma.product.findMany({ include: { stocks: true } }).then(products => {
-    io.emit('products:updated', products.map(p => ({
-      id: p.id,
-      sku: p.sku,
-      name: p.name,
-      model: p.model,
-      compatibleModels: p.compatibleModels ? p.compatibleModels.split(',') : [],
-      price: p.price,
-      cost: p.cost,
-      location: p.location,
-      category: p.category,
-      supplier: p.supplier,
-      stockByStore: (p.stocks || []).reduce((acc, s) => { acc[s.store] = s.qty; return acc }, {})
-    })))
+    io.emit('products:updated', products.map(p => {
+      const stockByStore = (p.stocks || []).reduce((acc, s) => { acc[s.store] = s.qty; return acc }, {})
+      return {
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        model: p.model,
+        compatibleModels: p.compatibleModels ? p.compatibleModels.split(',') : [],
+        price: p.price,
+        cost: p.cost,
+        location: p.location,
+        category: p.category,
+        supplier: p.supplier,
+        stockByStore,
+        alertThreshold: p.alertThreshold
+      }
+    }).filter(p => Object.keys(p.stockByStore).length > 0))
   })
+}
+
+// Optimized: Broadcast delta changes for sales
+function broadcastSaleChange(action, sale, storeId = null) {
+  const event = {
+    action,  // 'create', 'delete'
+    sale,
+    timestamp: Date.now()
+  }
+
+  if (storeId) {
+    io.to(`store:${storeId}`).emit('sale:changed', event)
+    io.to('store:all').emit('sale:changed', event)
+  } else {
+    io.emit('sale:changed', event)
+  }
+
+  // Keep legacy broadcast
+  broadcastSales()
 }
 
 function broadcastSales() {

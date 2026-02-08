@@ -7,7 +7,11 @@ function computeKpis(list) {
   const totalItems = list.reduce((s, p) => s + (Number(p.qty) || 0), 0)
   const totalValue = list.reduce((s, p) => s + ((Number(p.qty) || 0) * (Number(p.price) || 0)), 0)
   const productsCount = list.length
-  const lowStock = list.filter(p => (Number(p.qty) || 0) < 5).length
+  const lowStock = list.filter(p => {
+    const qty = Number(p.qty) || 0
+    const threshold = Number(p.alertThreshold) || 5
+    return qty < threshold
+  }).length
   return { totalItems, totalValue, productsCount, lowStock }
 }
 

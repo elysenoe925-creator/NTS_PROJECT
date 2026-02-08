@@ -1,18 +1,40 @@
 const STORAGE_KEY = 'gsm_sales_v1'
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000'
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 function read() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
-    return JSON.parse(raw)
+
+    // Check structure
+    const parsed = JSON.parse(raw)
+
+    // Old format (array)
+    if (Array.isArray(parsed)) return parsed
+
+    // New format with timestamp
+    if (parsed.data && parsed.timestamp) {
+      if (Date.now() - parsed.timestamp < CACHE_TTL) {
+        return parsed.data
+      }
+      return parsed.data // Return expired data but should trigger refresh
+    }
+
+    return []
   } catch (e) {
     return []
   }
 }
 
 function write(list) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)) } catch (e) { }
+  try {
+    const cacheData = {
+      timestamp: Date.now(),
+      data: list
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cacheData))
+  } catch (e) { }
 }
 
 function dispatch(list) {
@@ -30,6 +52,32 @@ export function getSales(storeId) {
 export function setSales(list) {
   write(list)
   dispatch(list)
+}
+
+// Apply a delta update (single sale change)
+export function applyDelta(action, sale) {
+  const current = read()
+  let next = []
+
+  switch (action) {
+    case 'create':
+      // Add new sale if not exists
+      if (!current.some(s => s.id === sale.id)) {
+        next = [...current, sale]
+      } else {
+        next = current
+      }
+      break
+    case 'delete':
+      next = current.filter(s => s.id !== sale.id)
+      break
+    default:
+      next = current
+  }
+
+  if (next !== current) {
+    setSales(next)
+  }
 }
 
 // Refresh sales from API for optional store and update cache

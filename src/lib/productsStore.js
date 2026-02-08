@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'gsm_products_v1'
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000'
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 const defaultProducts = [
   { sku: 'P-001', name: 'Composant: Résistance 10k', model: 'RES-10K', compatibleModels: ['MB-100', 'MB-101'], stockByStore: { majunga: 80, tamatave: 40 }, location: 'Entrepôt A', category: 'Composants', supplier: 'Electronix', price: '0.05' },
@@ -11,14 +12,37 @@ function read() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultProducts
-    return JSON.parse(raw)
+
+    // Check if it's new structure with timestamp or old structure
+    const parsed = JSON.parse(raw)
+
+    // If it's an array, it's the old format (valid but no timestamp)
+    if (Array.isArray(parsed)) return parsed
+
+    // If object with data and timestamp
+    if (parsed.data && parsed.timestamp) {
+      // Valid if not expired
+      if (Date.now() - parsed.timestamp < CACHE_TTL) {
+        return parsed.data
+      }
+      // Expired: return data but trigger refresh (handled by caller or interceptor)
+      return parsed.data
+    }
+
+    return defaultProducts
   } catch (e) {
     return defaultProducts
   }
 }
 
 function write(list) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)) } catch (e) { }
+  try {
+    const cacheData = {
+      timestamp: Date.now(),
+      data: list
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cacheData))
+  } catch (e) { }
 }
 
 function dispatch(list) {
@@ -26,11 +50,47 @@ function dispatch(list) {
   window.dispatchEvent(ev)
 }
 
-export function getProducts() { return read() }
+export function getProducts() {
+  const products = read()
+
+  // If we got default products or empty list, possibly trigger refresh
+  // but we don't want to loop infinitley. 
+  // For now, relies on explicit refresh calls or TTL checks.
+  return products
+}
 
 export function setProducts(list) {
   write(list)
   dispatch(list)
+}
+
+// Apply a delta update (single product change)
+export function applyDelta(action, product) {
+  const current = getProducts()
+  let next = []
+
+  switch (action) {
+    case 'create':
+      // Check if already exists to avoid duplicates
+      if (!current.some(p => p.id === product.id)) {
+        next = [...current, product]
+      } else {
+        next = current
+      }
+      break
+    case 'update':
+      next = current.map(p => p.id === product.id ? product : p)
+      break
+    case 'delete':
+      next = current.filter(p => p.id !== product.id && p.sku !== product.sku)
+      break
+    default:
+      next = current
+  }
+
+  if (next !== current) {
+    setProducts(next)
+  }
 }
 
 // Fetch latest products from API for optional store and update cache
@@ -40,7 +100,7 @@ export async function refreshProducts(storeId) {
     const res = await fetch(url)
     if (!res.ok) return
     const data = await res.json()
-    // write to local cache for compatibility with existing code
+    // write to local cache with timestamp
     write(data)
     dispatch(data)
     return data
@@ -71,7 +131,11 @@ export function subscribe(cb) {
 // Helper: return products adapted to a specific storeId
 export function getProductsForStore(storeId) {
   const all = read() || []
-  if (!storeId || storeId === 'all') return all.map(p => ({ ...p, qty: sumStock(p) }))
+  if (!storeId || storeId === 'all') {
+    return all
+      .map(p => ({ ...p, qty: sumStock(p) }))
+      .filter(p => p.qty > 0 || (p.stockByStore && Object.keys(p.stockByStore).length > 0))
+  }
   // Only return products that have an explicit stock entry for this store.
   // This avoids showing a product in another store with an implicit zero quantity
   // when the product was created for a different store.

@@ -6,6 +6,7 @@ import { createOrder, getOrders } from '../lib/ordersStore'
 import { getCurrentUser } from '../lib/authStore'
 import { useStore } from '../lib/StoreContext'
 import { TrendingUp, AlertTriangle, CheckCircle, Package, DollarSign, Calendar, ArrowRight, Loader2 } from 'lucide-react'
+import { showToast } from '../lib/toast'
 
 
 
@@ -86,17 +87,17 @@ export default function DecisionCenter() {
 
   const handleCreateOrder = async () => {
     if (selectedItems.length === 0) {
-      alert('Sélectionnez au moins un produit à commander')
+      showToast('Sélectionnez au moins un produit à commander', 'error')
       return
     }
 
     const itemsToOrder = items.filter(item => selectedItems.includes(item.sku))
     try {
       const order = await createOrder(itemsToOrder)
-      alert(`Commande créée (#${order.referenceNumber || order.id}). Allez dans "Commandes" pour la finaliser.`)
+      showToast(`Commande créée (#${order.referenceNumber || order.id}). Allez dans "Commandes" pour la finaliser.`, 'success')
       setSelectedItems([])
     } catch (e) {
-      alert('Erreur: ' + e.message)
+      showToast(e.message, 'error')
     }
   }
   const cardStyle = {

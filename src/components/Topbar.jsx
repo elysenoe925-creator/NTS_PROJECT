@@ -115,8 +115,8 @@ export default function Topbar() {
                 if (route === '#/user') {
                   // Users section: only "Tous"
                   availableStores = ['all']
-                } else if (['#/arrivals', '#/orders', '#/decisions'].includes(route)) {
-                  // Arrivals, Orders, Decisions sections: only Majunga and Tamatave
+                } else if (['#/arrivals', '#/orders', '#/decisions', '#/stock'].includes(route)) {
+                  // Arrivals, Orders, Decisions, Stock sections: only Majunga and Tamatave
                   availableStores = ['majunga', 'tamatave']
                 }
 

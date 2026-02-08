@@ -7,6 +7,7 @@ import { showToast } from '../lib/toast'
 import { useStore } from '../lib/StoreContext'
 import IconButton from './IconButton'
 import HeaderSectionTitle from './HeaderSection'
+import { AlertTriangle } from 'lucide-react'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000'
 
@@ -15,6 +16,7 @@ export default function Arrivals() {
   const [arrivals, setArrivals] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [error, setError] = useState('')
@@ -174,6 +176,7 @@ export default function Arrivals() {
     }
 
     try {
+      setIsSubmitting(true)
       const token = getToken()
       const payload = {
         referenceNumber: form.referenceNumber,
@@ -203,9 +206,10 @@ export default function Arrivals() {
         throw new Error(err.error || 'Failed to create arrival')
       }
 
-      const data = await res.json()
+      await res.json()
 
       showToast('Arrivage créé avec succès', 'success')
+      await logAction('ARRIVAGE_CREE', `Nouvel arrivage: ${form.referenceNumber} de ${form.supplier}`)
 
       setForm({
         referenceNumber: '',
@@ -222,6 +226,8 @@ export default function Arrivals() {
       console.error('Error creating arrival:', e)
       setError(e.message)
       showToast(e.message, 'error')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -229,6 +235,7 @@ export default function Arrivals() {
     if (!confirm('Confirmer cet arrivage?\n\nLe stock sera augmenté et le coût moyen pondéré sera calculé automatiquement.')) return
 
     try {
+      setIsSubmitting(true)
       const token = getToken()
       const res = await fetch(`${API_BASE}/api/arrivals/${id}/confirm`, {
         method: 'PUT',
@@ -241,10 +248,13 @@ export default function Arrivals() {
       }
 
       showToast('Arrivage confirmé - Stock et coût moyen pondéré mis à jour', 'success')
+      await logAction('ARRIVAGE_CONFIRME', `Arrivage confirmé ID: ${id}`)
       await fetchArrivals()
     } catch (e) {
       console.error('Error confirming arrival:', e)
       showToast(e.message, 'error')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -252,6 +262,7 @@ export default function Arrivals() {
     if (!confirm('Annuler cet arrivage?')) return
 
     try {
+      setIsSubmitting(true)
       const token = getToken()
       const res = await fetch(`${API_BASE}/api/arrivals/${id}/cancel`, {
         method: 'PUT',
@@ -264,10 +275,13 @@ export default function Arrivals() {
       }
 
       showToast('Arrivage annulé', 'success')
+      await logAction('ARRIVAGE_ANNULE', `Arrivage annulé ID: ${id}`)
       await fetchArrivals()
     } catch (e) {
       console.error('Error cancelling arrival:', e)
       showToast(e.message, 'error')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -306,15 +320,28 @@ export default function Arrivals() {
             <Download size={18} />
             <span>Exporter</span>
           </button>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
-          >
-            <Plus size={18} />
-            <span>{showForm ? 'Fermer Formulaire' : 'Nouvel Arrivage'}</span>
-          </button>
+          {currentStore !== 'all' && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-200"
+            >
+              <Plus size={18} />
+              <span>{showForm ? 'Fermer Formulaire' : 'Nouvel Arrivage'}</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* GLOBAL VIEW GUIDANCE */}
+      {currentStore === 'all' && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800 shadow-sm">
+          <AlertTriangle className="text-amber-500 shrink-0" size={24} />
+          <div>
+            <p className="font-bold text-sm uppercase tracking-wide">Vue Globale - Lecture seule</p>
+            <p className="text-sm opacity-90">Veuillez sélectionner une boutique spécifique pour enregistrer de nouveaux arrivages ou les confirmer.</p>
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit Form */}
       {showForm && (
@@ -456,10 +483,15 @@ export default function Arrivals() {
               <div className="flex flex-col md:flex-row gap-2 order-2 md:order-1">
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 flex items-center justify-center gap-2 font-bold shadow-md shadow-green-100 transition-all active:scale-95 whitespace-nowrap"
                 >
-                  <Check className="w-5 h-5" />
-                  Enregistrer l'Arrivage
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    <Check className="w-5 h-5" />
+                  )}
+                  {isSubmitting ? 'Enregistrement...' : "Enregistrer l'Arrivage"}
                 </button>
                 <button
                   type="button"
@@ -655,18 +687,20 @@ export default function Arrivals() {
               </div>
 
               {/* Actions */}
-              {arrival.status === 'pending' && (
+              {arrival.status === 'pending' && currentStore !== 'all' && (
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => confirmArrival(arrival.id)}
+                    disabled={isSubmitting}
                     className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 flex items-center justify-center gap-2 text-sm font-bold shadow-md shadow-emerald-100 transition-all active:scale-95"
                   >
-                    <Check className="w-4 h-4" />
-                    Confirmer & Augmenter Stock
+                    {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <Check className="w-4 h-4" />}
+                    {isSubmitting ? 'Confirmation...' : 'Confirmer & Augmenter Stock'}
                   </button>
                   <button
                     onClick={() => cancelArrival(arrival.id)}
-                    className="px-4 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl hover:bg-red-50 flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95"
+                    disabled={isSubmitting}
+                    className="px-4 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl hover:bg-red-50 flex items-center justify-center gap-2 text-sm font-bold transition-all active:scale-95 disabled:opacity-50"
                   >
                     <X className="w-4 h-4" />
                     Annuler

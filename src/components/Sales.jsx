@@ -10,6 +10,7 @@ import IconButton from './IconButton'
 import { useStore } from '../lib/StoreContext'
 import { showToast } from '../lib/toast'
 import { AlertCircle, Package, Edit2, Trash2, CheckCircle2, AlertTriangle, Search, Filter, Download, Plus, RotateCcw } from 'lucide-react'
+import ConfirmModal from './ConfirmModal'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000'
 
@@ -29,6 +30,11 @@ export default function Sales() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [modalQuery, setModalQuery] = useState('') // Separate query for modal
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false, title: '', message: '', type: 'warning', onConfirm: () => { }
+  })
+
   useEffect(() => {
     const unsubP = subscribe(() => setProducts(getProductsForStore(currentStore)))
     const unsubS = subscribeSales(() => setSales(getSales(currentStore)))
@@ -45,22 +51,46 @@ export default function Sales() {
   async function handleSell(e) {
     e.preventDefault()
     setMessage('')
+
     if (!currentStore || currentStore === 'all') {
       showToast('error', 'Sélectionnez une boutique'); return
+    }
+
+    const sellQty = parseInt(qty)
+    if (isNaN(sellQty) || sellQty <= 0) {
+      showToast('error', 'Quantité invalide'); return
     }
 
     const product = products.find(p => p.sku === selectedSku)
     if (!product) { showToast('error', 'Produit introuvable'); return }
 
     const available = Number(product.qty || 0)
-    const sellQty = Number(qty) || 0
-
 
     if (available <= 0 || sellQty > available) {
-      showToast('error', `Stock insuffisant (${available} disponible(s)`)
+      showToast('error', `Stock insuffisant (${available} disponible(s))`)
       return
     }
 
+    // High value or quantity confirmation
+    const total = Number(product.price) * sellQty
+    const isHighValue = total > 1000000 // 1M Ar as threshold
+
+    if (isHighValue || sellQty > 10) {
+      setConfirmModal({
+        isOpen: true,
+        title: "Confirmer la vente importante",
+        message: `Confirmer la vente de ${sellQty} x ${product.name} pour un total de ${total.toLocaleString()} Ar ?`,
+        type: 'warning',
+        confirmText: "Confirmer la vente",
+        onConfirm: () => executeSell(product, sellQty)
+      })
+      return
+    }
+
+    executeSell(product, sellQty)
+  }
+
+  async function executeSell(product, sellQty) {
     setIsSubmitting(true)
     try {
       const token = getToken ? getToken() : null
@@ -70,30 +100,43 @@ export default function Sales() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({ sku: selectedSku, qty: sellQty, client: client || 'Client inconnu', store: currentStore })
+        body: JSON.stringify({
+          sku: selectedSku,
+          qty: sellQty,
+          client: client.trim() || 'Client inconnu',
+          store: currentStore
+        })
       })
 
-      if (!res.ok) throw new Error('Erreur lors de la vente')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Erreur lors de la vente')
+      }
 
-      const data = await res.json()
+      await res.json()
       showToast('success', 'Vente enregistrée avec succès')
-
       await logAction('VENTE', `Vente: ${sellQty} x ${product.name} (${selectedSku})`)
-
-      refreshProducts(currentStore)
-      refreshSales(currentStore)
+      await Promise.all([refreshProducts(currentStore), refreshSales(currentStore)])
 
       // Reset
       setShowForm(false)
       setSelectedSku('')
       setQty(1)
       setClient('')
+      setModalQuery('')
     } catch (e) {
-      showToast('error', 'Erreur réseau ou serveur')
+      showToast('error', e.message || 'Erreur réseau ou serveur')
     } finally {
       setIsSubmitting(false)
     }
   }
+
+  /* 
+  Ancienne logique handleSell conservée pour référence (partie API)
+  async function handleSell_partie_api(e) {
+    // ... logic moving to executeSell
+  }
+  */
 
   // --- Logic for Modal & Export (Inchangé mais utilisé dans le JSX) ---
   function showProductDetails(sku) {
@@ -153,15 +196,28 @@ export default function Sales() {
 
         <div className="flex gap-2">
           <button onClick={handleExportSales} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
-            <Download size={18}/>
+            <Download size={18} />
             <span>Exporter</span>
           </button>
-          <button onClick={() => { setModalQuery(''); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200">
-            <Plus size={18}/>
-            <span>Nouvelle Vente</span>
-          </button>
+          {currentStore !== 'all' && (
+            <button onClick={() => { setModalQuery(''); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200">
+              <Plus size={18} />
+              <span>Nouvelle Vente</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {/* GLOBAL VIEW GUIDANCE */}
+      {currentStore === 'all' && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 text-amber-800 shadow-sm">
+          <AlertTriangle className="text-amber-500 shrink-0" size={24} />
+          <div>
+            <p className="font-bold text-sm uppercase tracking-wide">Vue Globale - Lecture seule</p>
+            <p className="text-sm opacity-90">Veuillez sélectionner une boutique spécifique pour enregistrer de nouvelles ventes.</p>
+          </div>
+        </div>
+      )}
 
       {/* SEARCH BAR */}
       <div className="relative mb-6">
@@ -359,6 +415,10 @@ export default function Sales() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        {...confirmModal}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   )
 }

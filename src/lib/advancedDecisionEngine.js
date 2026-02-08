@@ -207,7 +207,7 @@ export async function computeDecisions(options = {}) {
     const velocity = sold / days
     const avgSalesPerDay = velocity
     const stock = Number(p.qty || 0)
-    const threshold = (p.reorderThreshold != null) ? Number(p.reorderThreshold) : 5
+    const threshold = (p.alertThreshold != null) ? Number(p.alertThreshold) : 5
 
     // Nouvelles métriques pour améliorer la précision
     const hasRecent = hasRecentSales(salesForSku, 30) // ventes dans les 30 derniers jours ?

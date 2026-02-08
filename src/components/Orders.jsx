@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { getOrders, getOrderStats, getOrdersByStatus, updateOrderStatus, deleteOrder, updateOrderItemQuantity, removeOrderItem, updateOrder, subscribe, refreshOrders, ORDER_STATUSES, submitOrder } from '../lib/ordersStore'
 import { getCurrentUser } from '../lib/authStore'
+import { showToast } from '../lib/toast'
+import { logAction } from '../lib/actionLogger'
+import ConfirmModal from './ConfirmModal'
 
 export default function Orders() {
   const user = getCurrentUser()
@@ -10,8 +13,14 @@ export default function Orders() {
   const [orders, setOrders] = useState([])
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState(null)
   const [expandedOrderId, setExpandedOrderId] = useState(null)
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false, title: '', message: '', type: 'warning', onConfirm: () => { }
+  })
 
   useEffect(() => {
     let mounted = true
@@ -33,36 +42,65 @@ export default function Orders() {
   }, [selectedStatus])
 
   const handleStatusChange = async (orderId, newStatus) => {
+    if (newStatus === ORDER_STATUSES.DELIVERED) {
+      setConfirmModal({
+        isOpen: true,
+        title: "Confirmer la réception",
+        message: "Confirmer la réception de la commande ?\n\nCela va générer un ARRIVAGE en attente que vous devrez confirmer pour mettre à jour le stock.",
+        type: 'info',
+        confirmText: "Confirmer la réception",
+        onConfirm: () => executeStatusChange(orderId, newStatus)
+      })
+      return
+    }
+    executeStatusChange(orderId, newStatus)
+  }
+
+  const executeStatusChange = async (orderId, newStatus) => {
     try {
-      if (newStatus === ORDER_STATUSES.DELIVERED) {
-        if (!window.confirm("Confirmer la réception de la commande ?\n\nCela va générer un ARRIVAGE en attente que vous devrez confirmer pour mettre à jour le stock.")) {
-          return;
-        }
-      }
+      setIsSubmitting(true)
       await updateOrderStatus(orderId, newStatus)
-      alert('Statut mis à jour avec succès!' + (newStatus === ORDER_STATUSES.DELIVERED ? ' Arrivage généré.' : ''))
+      showToast(`Statut mis à jour: ${getStatusLabel(newStatus)}`, 'success')
+      await logAction('COMMANDE_STATUT', `Commande #${orderId} passée à ${newStatus}`)
     } catch (e) {
-      alert('Erreur: ' + e.message)
+      showToast(e.message, 'error')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleDeleteOrder = async (orderId) => {
-    if (window.confirm('Confirmer la suppression de cette commande?')) {
-      try {
-        await deleteOrder(orderId)
-        alert('Commande supprimée!')
-      } catch (e) {
-        alert('Erreur: ' + e.message)
+    setConfirmModal({
+      isOpen: true,
+      title: "Supprimer la commande",
+      message: "Confirmer la suppression de cette commande ?",
+      type: 'danger',
+      confirmText: "Supprimer",
+      onConfirm: async () => {
+        try {
+          setIsSubmitting(true)
+          await deleteOrder(orderId)
+          showToast('Commande supprimée', 'success')
+          await logAction('COMMANDE_SUPPRIMEE', `Commande #${orderId} supprimée`)
+        } catch (e) {
+          showToast(e.message, 'error')
+        } finally {
+          setIsSubmitting(false)
+        }
       }
-    }
+    })
   }
 
   const handleSubmitOrder = async (orderId) => {
     try {
+      setIsSubmitting(true)
       await submitOrder(orderId)
-      alert('Commande soumise pour approbation!')
+      showToast('Commande soumise pour approbation', 'success')
+      await logAction('COMMANDE_SOUMISE', `Commande #${orderId} soumise`)
     } catch (e) {
-      alert('Erreur: ' + e.message)
+      showToast(e.message, 'error')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -78,18 +116,26 @@ export default function Orders() {
     try {
       await updateOrderItemQuantity(orderId, itemId, quantity)
     } catch (e) {
-      alert('Erreur: ' + e.message)
+      showToast(e.message, 'error')
     }
   }
 
   const handleRemoveItem = async (orderId, itemId) => {
-    if (window.confirm('Supprimer cet article?')) {
-      try {
-        await removeOrderItem(orderId, itemId)
-      } catch (e) {
-        alert('Erreur: ' + e.message)
+    setConfirmModal({
+      isOpen: true,
+      title: "Supprimer l'article",
+      message: "Supprimée cet article ?",
+      type: 'danger',
+      confirmText: "Supprimer",
+      onConfirm: async () => {
+        try {
+          await removeOrderItem(orderId, itemId)
+          showToast('Article supprimé', 'success')
+        } catch (e) {
+          showToast(e.message, 'error')
+        }
       }
-    }
+    })
   }
 
   const getStatusClasses = (status) => {
@@ -297,15 +343,18 @@ export default function Orders() {
                     {order.status === ORDER_STATUSES.DRAFT && (
                       <>
                         <button
-                          className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 font-medium rounded-lg text-sm transition-all"
+                          className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 font-medium rounded-lg text-sm transition-all disabled:opacity-50"
                           onClick={() => handleDeleteOrder(order.id)}
+                          disabled={isSubmitting}
                         >
                           Supprimer
                         </button>
                         <button
-                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all"
+                          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:bg-indigo-400"
                           onClick={() => handleSubmitOrder(order.id)}
+                          disabled={isSubmitting}
                         >
+                          {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
                           Soumettre pour approbation
                         </button>
                       </>
@@ -313,41 +362,53 @@ export default function Orders() {
                     {order.status === ORDER_STATUSES.PENDING && isAdmin && (
                       <>
                         <button
-                          className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 font-medium rounded-lg text-sm transition-all"
+                          className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 font-medium rounded-lg text-sm transition-all disabled:opacity-50"
                           onClick={() => handleStatusChange(order.id, ORDER_STATUSES.REJECTED)}
+                          disabled={isSubmitting}
                         >
                           Rejeter
                         </button>
                         <button
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all"
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:bg-blue-400"
                           onClick={() => handleStatusChange(order.id, ORDER_STATUSES.APPROVED)}
+                          disabled={isSubmitting}
                         >
+                          {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
                           Approuver
                         </button>
                       </>
                     )}
                     {order.status === ORDER_STATUSES.APPROVED && (
                       <button
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all"
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:bg-purple-400"
                         onClick={() => handleStatusChange(order.id, ORDER_STATUSES.CONFIRMED)}
+                        disabled={isSubmitting}
                       >
+                        {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
                         Marquer confirmée
                       </button>
                     )}
                     {order.status === ORDER_STATUSES.CONFIRMED && (
                       <button
-                        className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all"
+                        className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:bg-cyan-400"
                         onClick={() => handleStatusChange(order.id, ORDER_STATUSES.SHIPPED)}
+                        disabled={isSubmitting}
                       >
+                        {isSubmitting && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
                         Marquer expédiée
                       </button>
                     )}
                     {order.status === ORDER_STATUSES.SHIPPED && (
                       <button
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all flex items-center gap-2"
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:bg-emerald-400"
                         onClick={() => handleStatusChange(order.id, ORDER_STATUSES.DELIVERED)}
+                        disabled={isSubmitting}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                        {isSubmitting ? (
+                          <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                        )}
                         Reçu / Créer Arrivage
                       </button>
                     )}
@@ -366,6 +427,10 @@ export default function Orders() {
           ))
         )}
       </div>
+      <ConfirmModal
+        {...confirmModal}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   )
 }

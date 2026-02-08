@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { getCurrentUser, logout, subscribeAuth } from '../lib/authStore'
 import { LogOut } from 'lucide-react'
 import { useSettings } from '../lib/settingsStore'
+import { showToast } from '../lib/toast'
 
 const ALL_LINKS = [
   { href: '#/dashboard', id: 'dashboard', label: 'Tableau de bord' },
@@ -204,12 +205,12 @@ export default function Sidebar({ onToggleCalculator }) {
                             setTimeout(() => setUploadingAvatar(false), 300)
                           } catch (err) {
                             setUploadingAvatar(false)
-                            alert('Erreur lors de la mise à jour de la photo: ' + err.message)
+                            showToast('Erreur lors de la mise à jour de la photo: ' + err.message, 'error')
                           }
                         }
                         reader.onerror = () => {
                           setUploadingAvatar(false)
-                          alert('Erreur lors du chargement de l\'image')
+                          showToast('Erreur lors du chargement de l\'image', 'error')
                         }
                         reader.readAsDataURL(file)
                       }
@@ -243,6 +244,16 @@ export default function Sidebar({ onToggleCalculator }) {
         )}
 
       </aside>
+
+      {/* Logout Overlay */}
+      {loadingLogout && (
+        <div className="logout-overlay">
+          <div className="logout-content">
+            <div className="logout-spinner"></div>
+            <div className="logout-text">Déconnexion en cours...</div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

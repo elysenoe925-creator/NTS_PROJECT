@@ -55,7 +55,7 @@ export default function Dashboard() {
   useEffect(() => {
     // Auto-adjust store based on route restrictions
     // For routes that don't allow "Tous", switch to Majunga if currently on "Tous"
-    if (['#/arrivals', '#/orders', '#/decisions'].includes(route) && currentStore === 'all') {
+    if (['#/arrivals', '#/orders', '#/decisions', '#/stock'].includes(route) && currentStore === 'all') {
       setCurrentStore('majunga')
     }
   }, [route, currentStore, setCurrentStore])
@@ -105,7 +105,7 @@ export default function Dashboard() {
         </section>
 
         {/* Alerts Section */}
-       
+
 
         {/* Charts and Activity Section */}
         <section className="widgets">

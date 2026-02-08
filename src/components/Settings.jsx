@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { getToken } from '../lib/authStore'
+import { showToast } from '../lib/toast'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000'
 
@@ -47,11 +48,11 @@ export default function Settings() {
             if (res.ok) {
                 window.location.reload()
             } else {
-                alert('Échec de la création de la sauvegarde')
+                showToast('Échec de la création de la sauvegarde', 'error')
             }
         } catch (e) {
             console.error('Backup creation failed', e)
-            alert('Erreur lors de la création de la sauvegarde')
+            showToast('Erreur lors de la création de la sauvegarde', 'error')
         } finally {
             if (mounted.current) setCreatingBackup(false)
         }
@@ -72,11 +73,11 @@ export default function Settings() {
                 window.location.reload()
             } else {
                 const err = await res.json()
-                alert(`Erreur: ${err.error || 'Suppression échouée'}`)
+                showToast(`Erreur: ${err.error || 'Suppression échouée'}`, 'error')
             }
         } catch (e) {
             console.error('Backup deletion failed', e)
-            alert('Impossible de contacter le serveur')
+            showToast('Impossible de contacter le serveur', 'error')
         }
     }
 
@@ -105,11 +106,11 @@ export default function Settings() {
                     document.body.removeChild(a)
                 }, 100)
             } else {
-                alert('Erreur lors du téléchargement')
+                showToast('Erreur lors du téléchargement', 'error')
             }
         } catch (e) {
             console.error('Download failed', e)
-            alert('Erreur réseau lors du téléchargement')
+            showToast('Erreur réseau lors du téléchargement', 'error')
         }
     }
 
@@ -202,7 +203,7 @@ export default function Settings() {
                 </div>
             </section>
 
-            
+
         </div>
     )
 }

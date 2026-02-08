@@ -83,6 +83,11 @@ function setupListeners() {
   })
 
   // === PRODUCTS EVENTS ===
+  socket.on('product:changed', (event) => {
+    console.log('📦 product:changed received', event)
+    productsStore.applyDelta(event.action, event.product)
+  })
+
   socket.on('products:updated', (products) => {
     console.log('📦 products:updated received')
     productsStore.setProducts(products)
@@ -132,13 +137,18 @@ function setupListeners() {
   socket.on('orders:status-changed', (update) => {
     console.log('📋 orders:status-changed received', update)
     const current = ordersStore.getOrders()
-    const updated = current.map(o => 
+    const updated = current.map(o =>
       o.id === update.orderId ? { ...o, status: update.status } : o
     )
     ordersStore.setOrders(updated)
   })
 
   // === SALES EVENTS ===
+  socket.on('sale:changed', (event) => {
+    console.log('💰 sale:changed received', event)
+    salesStore.applyDelta(event.action, event.sale)
+  })
+
   socket.on('sales:updated', (sales) => {
     console.log('💰 sales:updated received')
     salesStore.setSales(sales)

@@ -9,11 +9,13 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000'
 import { useStore } from '../lib/StoreContext'
 import HeaderSectionTitle from './HeaderSection'
 import { AlertCircle, Package, Edit2, Trash2, CheckCircle2, AlertTriangle, Search, Filter, Download, Plus, RotateCcw } from 'lucide-react'
+import ConfirmModal from './ConfirmModal'
 
 export default function Stock() {
   const { currentStore } = useStore()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const DEFAULT_THRESHOLD = 5
   const [q, setQ] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -28,6 +30,11 @@ export default function Stock() {
   const [restockSku, setRestockSku] = useState(null)
   const [restockQty, setRestockQty] = useState('')
   const [restockNotes, setRestockNotes] = useState('')
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false, title: '', message: '', type: 'warning', onConfirm: () => { }
+  })
 
   useEffect(() => {
     let mounted = true
@@ -90,19 +97,31 @@ export default function Stock() {
   async function handleAdd(e) {
     e.preventDefault()
     // basic validation
-    if (!form.sku.trim() || !form.name.trim()) { setError('SKU et nom requis'); return }
+    if (!form.sku.trim() || !form.name.trim()) {
+      setError('SKU et nom requis')
+      showToast('error', 'SKU et nom requis')
+      return
+    }
+
+    const quantity = parseInt(form.qty)
+    if (isNaN(quantity) || quantity < 0) {
+      setError('Quantité invalide')
+      showToast('error', 'Quantité invalide')
+      return
+    }
+
+    setIsSubmitting(true)
     const token = getToken()
     try {
       if (editingSku) {
         // update existing product via API
-        // Si on modifie cost ou margin et qu'on est dans une boutique spécifique, mettre à jour par store
         const hasStorePricing = (form.cost || form.margin) && currentStore && currentStore !== 'all'
 
         const res = await fetch(`${API_BASE}/api/products/${encodeURIComponent(editingSku)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify({
-            ...(hasStorePricing && { store: currentStore }), // Ajouter store pour les mises à jour par boutique
+            ...(hasStorePricing && { store: currentStore }),
             sku: !hasStorePricing ? form.sku.trim() : undefined,
             name: !hasStorePricing ? form.name.trim() : undefined,
             model: !hasStorePricing ? (form.model.trim() || null) : undefined,
@@ -112,20 +131,20 @@ export default function Stock() {
             supplier: !hasStorePricing ? (form.supplier.trim() || null) : undefined,
             cost: form.cost || null,
             margin: form.margin || null,
-            qty: Number(form.qty) || 0,
-            ...(hasStorePricing ? {} : { stocks: [{ store: currentStore === 'all' ? 'majunga' : currentStore, qty: Number(form.qty) || 0 }] })
+            qty: quantity,
+            ...(hasStorePricing ? {} : { stocks: [{ store: currentStore === 'all' ? 'majunga' : currentStore, qty: quantity }] })
           })
         })
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: 'Erreur mise à jour' }))
-          setError(err.error || 'Erreur lors de la mise à jour')
-          return
+          throw new Error(err.error || 'Erreur lors de la mise à jour')
         }
         await logAction('MISE_A_JOUR_PRODUIT', `Produit ${editingSku} mis à jour: ${form.name}`)
         await refreshProducts(currentStore)
-        showToast('success', 'Produit mis à jour')
+        showToast('success', 'Produit mis à jour avec succès')
         setEditingSku(null)
         setForm({ sku: '', name: '', model: '', compatibleModels: '', qty: '', location: '', category: '', supplier: '', cost: '', margin: '' })
+        setShowForm(false)
         return
       }
 
@@ -141,20 +160,27 @@ export default function Stock() {
         supplier: form.supplier.trim() || null,
         cost: form.cost || null,
         margin: form.margin || null,
-        stocks: [{ store: stockKey, qty: Number(form.qty) || 0 }]
+        stocks: [{ store: stockKey, qty: quantity }]
       }
-      const res = await fetch(`${API_BASE}/api/products`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(payload) })
+      const res = await fetch(`${API_BASE}/api/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(payload)
+      })
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Erreur création' }))
-        setError(err.error || 'Erreur lors de la création')
-        return
+        throw new Error(err.error || 'Erreur lors de la création')
       }
-      await logAction('CREATION_PRODUIT', `Produit créé: ${form.sku} - ${form.name} (Qté: ${form.qty})`)
+      await logAction('CREATION_PRODUIT', `Produit créé: ${form.sku} - ${form.name} (Qté: ${quantity})`)
       await refreshProducts(currentStore)
-      showToast('success', 'Produit créé')
+      showToast('success', 'Produit créé avec succès')
       setForm({ sku: '', name: '', model: '', compatibleModels: '', qty: '', location: '', category: '', supplier: '', cost: '', margin: '' })
+      setShowForm(false)
     } catch (e) {
-      setError('Erreur réseau')
+      setError(e.message || 'Erreur réseau')
+      showToast('error', e.message || 'Erreur réseau')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -169,20 +195,32 @@ export default function Stock() {
   }
 
   function handleDelete(sku) {
-    if (!confirm(`Supprimer le produit ${sku} ?`)) return
+    setConfirmModal({
+      isOpen: true,
+      title: "Supprimer le produit",
+      message: `Voulez-vous vraiment supprimer le produit "${sku}" ? Cette action est irréversible.`,
+      type: 'danger',
+      confirmText: "Supprimer",
+      onConfirm: () => executeDelete(sku)
+    })
+  }
+
+  function executeDelete(sku) {
+
     const token = getToken()
-    fetch(`${API_BASE}/api/products/${encodeURIComponent(sku)}`, { method: 'DELETE', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } })
+    fetch(`${API_BASE}/api/products/${encodeURIComponent(sku)}`, {
+      method: 'DELETE',
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+    })
       .then(async res => {
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: 'Erreur suppression' }))
-          alert(err.error || 'Erreur lors de la suppression')
-          return
+          throw new Error(err.error || 'Erreur lors de la suppression')
         }
         await logAction('SUPPRESSION_PRODUIT', `Produit ${sku} supprimé`)
         await refreshProducts(currentStore)
-        setProducts(getProductsForStore(currentStore))
-        showToast('success', 'Produit supprimé')
-      }).catch(() => alert('Erreur réseau'))
+        showToast('success', 'Produit supprimé avec succès')
+      }).catch((e) => showToast('error', e.message || 'Erreur réseau'))
   }
 
   function openRestockModal(sku) {
@@ -207,6 +245,27 @@ export default function Stock() {
   }
 
   async function handleCancelRestock(sku) {
+    setConfirmModal({
+      isOpen: true,
+      title: "Annuler la demande",
+      message: "Annuler la demande de réapprovisionnement ? Cela supprimera la commande en attente.",
+      type: 'warning',
+      confirmText: "Annuler la demande",
+      onConfirm: async () => {
+        const success = await cancelRestock(sku, currentStore === 'all' ? 'majunga' : currentStore)
+        if (success) {
+          showToast('success', 'Demande annulée')
+          await refreshProducts(currentStore)
+        } else {
+          showToast('error', 'Erreur lors de l\'annulation')
+        }
+      }
+    })
+  }
+
+  /* 
+  Ancien code conservé temporairement pour référence
+  async function handleCancelRestock_old(sku) {
     if (!confirm('Annuler la demande de réapprovisionnement ? Cela supprimera la commande en attente.')) return
     const success = await cancelRestock(sku, currentStore === 'all' ? 'majunga' : currentStore)
     if (success) {
@@ -216,6 +275,7 @@ export default function Stock() {
       showToast('error', 'Erreur lors de l\'annulation')
     }
   }
+  */
 
   return (
     <div className="stock-container p-4 lg:p-8">
@@ -556,8 +616,13 @@ export default function Stock() {
                 {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium">{error}</div>}
 
                 <div className="pt-4 flex gap-3">
-                  <button type="submit" className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 uppercase tracking-wide">
-                    {editingSku ? 'Sauvegarder' : 'Ajouter au stock'}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 uppercase tracking-wide flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting && <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                    {isSubmitting ? 'Traitement...' : (editingSku ? 'Sauvegarder' : 'Ajouter au stock')}
                   </button>
                   <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
                     Annuler
@@ -613,10 +678,12 @@ export default function Stock() {
           </div>
         )
       }
+
+      <ConfirmModal
+        {...confirmModal}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div >
   )
 }
-
-
-
 
