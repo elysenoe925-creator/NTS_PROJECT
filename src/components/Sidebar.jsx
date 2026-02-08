@@ -1,34 +1,36 @@
 import React, { useState, useEffect } from 'react'
 import { getCurrentUser, logout, subscribeAuth } from '../lib/authStore'
-import { LogOut } from 'lucide-react'
+import {
+  LogOut,
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  Truck,
+  ClipboardCheck,
+  ClipboardList,
+  History,
+  Users,
+  Settings,
+  Calculator,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Camera
+} from 'lucide-react'
 import { useSettings } from '../lib/settingsStore'
 import { showToast } from '../lib/toast'
 
 const ALL_LINKS = [
-  { href: '#/dashboard', id: 'dashboard', label: 'Tableau de bord' },
-  { href: '#/sales', id: 'sales', label: 'Ventes' },
-  { href: '#/stock', id: 'stock', label: 'Stock' },
-  { href: '#/arrivals', id: 'arrivals', label: 'Arrivages' },
-  { href: '#/decisions', id: 'decisions', label: 'Décisions' },
-  { href: '#/orders', id: 'orders', label: 'Commandes' },
-  { href: '#/tracking', id: 'tracking', label: 'Suivi' },
-  { href: '#/user', id: 'user', label: 'Utilisateurs' },
-  { href: '#/settings', id: 'settings', label: 'Paramètres' }
-
+  { href: '#/dashboard', id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
+  { href: '#/sales', id: 'sales', label: 'Ventes', icon: ShoppingCart },
+  { href: '#/stock', id: 'stock', label: 'Stock', icon: Package },
+  { href: '#/arrivals', id: 'arrivals', label: 'Arrivages', icon: Truck },
+  { href: '#/decisions', id: 'decisions', label: 'Décisions', icon: ClipboardCheck },
+  { href: '#/orders', id: 'orders', label: 'Commandes', icon: ClipboardList },
+  { href: '#/tracking', id: 'tracking', label: 'Suivi', icon: History },
+  { href: '#/user', id: 'user', label: 'Utilisateurs', icon: Users },
+  { href: '#/settings', id: 'settings', label: 'Paramètres', icon: Settings }
 ]
-
-const ICONS = {
-  '#/dashboard': 'mdi:view-dashboard',
-  '#/sales': 'mdi:cash-register',
-  '#/stock': 'mdi:package-variant-closed',
-  '#/arrivals': 'mdi:truck-delivery',
-  '#/decisions': 'mdi:clipboard-text',
-  '#/orders': 'mdi:clipboard-list',
-  '#/tracking': 'mdi:history',
-  '#/user': 'mdi:user',
-  '#/settings': 'mdi:cog'
-
-}
 
 export default function Sidebar({ onToggleCalculator }) {
   const [current, setCurrent] = useState(window.location.hash || '#/dashboard')
@@ -37,7 +39,7 @@ export default function Sidebar({ onToggleCalculator }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [loadingLogout, setLoadingLogout] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const { settings } = useSettings() // Subscribe to settings changes
+  const { settings } = useSettings()
 
   useEffect(() => {
     const onHash = () => setCurrent(window.location.hash || '#/dashboard')
@@ -59,22 +61,34 @@ export default function Sidebar({ onToggleCalculator }) {
     }, 1500)
   }
 
-  // If the user is an employee, show Dashboard, Sales, Stock, and Arrivals links
   const LINKS = user && user.role === 'employee'
     ? ALL_LINKS.filter(l => l.href === '#/dashboard' || l.href === '#/sales' || l.href === '#/stock' || l.href === '#/arrivals')
     : ALL_LINKS.filter(l => l.href !== '#/tracking' || (user && user.role === 'admin'))
 
   const closeMobile = () => setMobileOpen(false)
 
+  // Generate initials for avatar fallback
+  const getInitials = (name) => {
+    if (!name) return '?'
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)
+  }
+
+  // Get color for avatar fallback
+  const getAvatarColor = (name) => {
+    const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+    if (!name) return colors[0]
+    let hash = 0
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    return colors[Math.abs(hash) % colors.length]
+  }
+
   return (
     <>
-      {/* Mobile menu toggle button */}
+      {/* Mobile menu toggle */}
       <button
         className={`mobile-menu-btn ${mobileOpen ? 'active' : ''}`}
         onClick={() => setMobileOpen(!mobileOpen)}
         aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
-        aria-expanded={mobileOpen}
-        aria-controls="sidebar"
       >
         <span className="hamburger-icon">
           <span className="hamburger-line hamburger-line-1"></span>
@@ -84,69 +98,60 @@ export default function Sidebar({ onToggleCalculator }) {
       </button>
 
       {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          className="mobile-overlay"
-          onClick={closeMobile}
-          aria-hidden="true"
-        ></div>
-      )}
+      {mobileOpen && <div className="mobile-overlay" onClick={closeMobile} />}
 
       {/* Sidebar */}
       <aside className={`sidebar-responsive ${mobileOpen ? 'sidebar-open' : 'sidebar-closed'} ${isCollapsed ? 'sidebar-collapsed' : ''}`} id="sidebar">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 lg:justify-between">
-          {!isCollapsed && (
+        {/* Header / Logo */}
+        <div className="flex items-center justify-between mb-10">
+          {!isCollapsed ? (
             <div className="logo-section">
               <div className="logo-icon">
-                <span className="iconify text-3xl" data-icon="mdi:package-variant-closed"></span>
+                <Package size={22} strokeWidth={2.5} />
               </div>
-              <div>
-                <div className="logo-text">Ntsoa GSM</div>
-                <div className="logo-subtitle">Gestion Stock</div>
+              <div className="flex flex-col">
+                <div className="logo-text">
+                  Ntsoa <span className="logo-text-accent">GSM</span>
+                </div>
+               
               </div>
             </div>
+          ) : (
+            <div className="logo-icon-only mx-auto">
+              <Package size={20} strokeWidth={2.5} />
+            </div>
           )}
-          {isCollapsed && <div className="logo-icon-only">
-            <span className="iconify text-2xl" data-icon="mdi:package-variant-closed"></span>
-          </div>}
-          <div className="flex gap-1">
-            <button
-              className="lg:flex hidden p-2 rounded-lg transition-all duration-300 text-slate-600 hover:text-slate-900 hover:bg-slate-200"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              title={isCollapsed ? "Développer" : "Réduire"}
-              aria-label="Toggle sidebar collapse"
-            >
-              <span className="iconify text-xl" data-icon={isCollapsed ? "mdi:chevron-right" : "mdi:chevron-left"}></span>
-            </button>
-            <button
-              className="lg:hidden p-2 rounded-lg transition-colors text-slate-600 hover:text-slate-900"
-              onClick={closeMobile}
-              aria-label="Close sidebar"
-            >
-              <span className="iconify text-2xl" data-icon="mdi:close"></span>
-            </button>
-          </div>
+
+          <button
+            className="hidden lg:flex p-2 rounded-xl transition-all duration-300 text-slate-400 hover:text-indigo-600 hover:bg-slate-100"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            title={isCollapsed ? "Développer" : "Réduire"}
+          >
+            {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </button>
+
+          
         </div>
 
         {/* Navigation */}
-        <nav className="nav flex-1">
-          {LINKS.map(l => (
-            <a
-              key={l.href}
-              href={l.href}
-              className={current === l.href ? 'active' : ''}
-              onClick={closeMobile}
-              title={isCollapsed ? ICONS[l.href] : l.label}
-            >
-              <span className="link-icon-wrapper">
-                <span className="iconify link-icon" data-icon={ICONS[l.href]} data-inline="false" aria-hidden="true"></span>
-              </span>
-              {!isCollapsed && <span className="nav-label">{l.label}</span>}
-            </a>
-          ))}
+        <nav className="nav flex-1 space-y-1">
+          {LINKS.map(l => {
+            const Icon = l.icon
+            return (
+              <a
+                key={l.href}
+                href={l.href}
+                className={current === l.href ? 'active' : ''}
+                onClick={closeMobile}
+              >
+                <span className="link-icon-wrapper">
+                  <Icon size={20} className="link-icon" />
+                </span>
+                {!isCollapsed && <span className="nav-label">{l.label}</span>}
+              </a>
+            )
+          })}
 
-          {/* Calculator Button */}
           <a
             href="#"
             onClick={(e) => {
@@ -154,103 +159,91 @@ export default function Sidebar({ onToggleCalculator }) {
               if (onToggleCalculator) onToggleCalculator()
               closeMobile()
             }}
-            title={isCollapsed ? 'Calculatrice' : 'Calculatrice'}
           >
             <span className="link-icon-wrapper">
-              <span className="iconify link-icon" data-icon="mdi:calculator" data-inline="false" aria-hidden="true"></span>
+              <Calculator size={20} className="link-icon" />
             </span>
             {!isCollapsed && <span className="nav-label">Calculatrice</span>}
           </a>
-
         </nav>
 
-        {/* User Profile Section */}
+        {/* User Profile Footer */}
         {user && (
-          <div className={`p-4 border-t border-slate-200 mt-auto ${isCollapsed ? 'flex justify-center' : ''}`}>
-            <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
+          <div className="sidebar-footer pt-6">
+            <div className={`user-section ${isCollapsed ? 'p-2 justify-center' : 'p-3'}`}>
               <div className="relative group">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center cursor-pointer relative">
+                <div
+                  className="w-10 h-10 rounded-xl overflow-hidden shadow-sm flex items-center justify-center relative cursor-pointer border-2 border-white"
+                  style={{ backgroundColor: user.avatar ? 'transparent' : getAvatarColor(user.displayName) }}
+                >
                   {uploadingAvatar && (
                     <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center backdrop-blur-sm z-10">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
                   {user.avatar ? (
                     <img src={user.avatar} alt={user.displayName} className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-lg font-bold text-slate-500">{user.displayName?.charAt(0).toUpperCase()}</span>
+                    <span className="text-sm font-bold text-white">{getInitials(user.displayName)}</span>
                   )}
-                  {/* Upload overlay */}
-                  <label htmlFor="avatar-upload" className={`absolute inset-0 bg-black/50 ${uploadingAvatar ? 'hidden' : 'hidden group-hover:flex'} items-center justify-center cursor-pointer transition-opacity opacity-0 group-hover:opacity-100`}>
-                    <span className="iconify text-white text-xs" data-icon="mdi:camera"></span>
+
+                  <label htmlFor="sidebar-avatar" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
+                    <Camera size={14} className="text-white" />
                   </label>
                   <input
                     type="file"
-                    id="avatar-upload"
+                    id="sidebar-avatar"
                     className="hidden"
                     accept="image/*"
-                    disabled={uploadingAvatar}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files[0]
-                      if (file) {
-                        setUploadingAvatar(true)
-                        const reader = new FileReader()
-                        reader.onloadstart = () => {
-                          setUploadingAvatar(true)
-                        }
-                        reader.onloadend = async () => {
-                          try {
-                            const { updateProfile } = await import('../lib/authStore')
-                            await updateProfile(user.id, { avatar: reader.result })
-                            setTimeout(() => setUploadingAvatar(false), 300)
-                          } catch (err) {
-                            setUploadingAvatar(false)
-                            showToast('Erreur lors de la mise à jour de la photo: ' + err.message, 'error')
-                          }
-                        }
-                        reader.onerror = () => {
+                      if (!file) return
+                      setUploadingAvatar(true)
+                      const reader = new FileReader()
+                      reader.onloadend = async () => {
+                        try {
+                          const { updateProfile } = await import('../lib/authStore')
+                          await updateProfile(user.id, { avatar: reader.result })
+                          showToast('Photo de profil mise à jour !', 'success')
+                        } catch (err) {
+                          showToast('Erreur: ' + err.message, 'error')
+                        } finally {
                           setUploadingAvatar(false)
-                          showToast('Erreur lors du chargement de l\'image', 'error')
                         }
-                        reader.readAsDataURL(file)
                       }
+                      reader.readAsDataURL(file)
                     }}
                   />
                 </div>
               </div>
 
               {!isCollapsed && (
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-slate-800 truncate">{user.displayName}</div>
-                  <div className="text-xs text-slate-500 truncate capitalize">{user.role}</div>
+                <div className="flex-1 min-w-0 ml-1">
+                  <div className="text-sm font-bold text-slate-900 truncate">{user.displayName}</div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{user.role}</div>
                 </div>
               )}
 
               {!isCollapsed && (
                 <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    handleLogout()
-                    closeMobile()
-                  }}
-                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  onClick={handleLogout}
+                  className="ml-auto p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                   title="Déconnexion"
                 >
-                  <span className="iconify text-xl" data-icon="mdi:logout"></span>
+                  <LogOut size={18} />
                 </button>
               )}
             </div>
           </div>
         )}
-
       </aside>
 
       {/* Logout Overlay */}
       {loadingLogout && (
         <div className="logout-overlay">
           <div className="logout-content">
-            <div className="logout-spinner"></div>
-            <div className="logout-text">Déconnexion en cours...</div>
+            <div className="logout-spinner" />
+            <div className="logout-text">Session fermée...</div>
           </div>
         </div>
       )}
