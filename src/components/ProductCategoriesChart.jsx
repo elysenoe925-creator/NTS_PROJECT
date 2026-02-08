@@ -14,39 +14,41 @@ ChartJS.register(ArcElement, Tooltip, Legend)
 const options = {
   responsive: true,
   maintainAspectRatio: false,
+  layout: {
+    padding: 20
+  },
   plugins: {
     legend: {
-      position: window.innerWidth < 1024 ? 'bottom' : 'right',
+      position: 'right',
       labels: {
-        font: { size: window.innerWidth < 640 ? 10 : 12, family: 'Inter, sans-serif', weight: '500' },
-        padding: window.innerWidth < 640 ? 8 : 16,
+        font: { size: 12, family: 'Inter, sans-serif' },
+        padding: 20,
+        boxWidth: 12,
         usePointStyle: true,
         pointStyle: 'circle',
-        color: '#475569',
+        color: '#64748b',
       },
     },
     tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      borderColor: 'rgba(249, 115, 22, 0.5)',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: 'rgba(226, 232, 240, 0.8)',
       borderWidth: 1,
-      padding: window.innerWidth < 640 ? 10 : 14,
-      titleFont: { size: 12, weight: 'bold', family: 'Inter, sans-serif' },
-      bodyFont: { size: 11, family: 'Inter, sans-serif' },
-      titleColor: '#fef3c7',
-      bodyColor: '#fed7aa',
+      padding: 12,
+      titleFont: { size: 13, weight: '600', family: 'Outfit, sans-serif' },
+      bodyFont: { size: 12, family: 'Inter, sans-serif' },
+      titleColor: '#1e293b',
+      bodyColor: '#475569',
       callbacks: {
         label: (ctx) => {
           const label = ctx.label || ''
           const value = ctx.parsed
           const total = ctx.dataset.data.reduce((a, b) => a + b, 0)
           const percentage = ((value / total) * 100).toFixed(1)
-          return `${label}: ${value} (${percentage}%)`
+          return ` ${label}: ${value} (${percentage}%)`
         },
       },
     },
-    title: {
-      display: false,
-    },
+    title: { display: false },
   },
 }
 
@@ -77,20 +79,19 @@ export default function ProductCategoriesChart() {
       const labels = sorted.map(([category]) => category)
       const data = sorted.map(([, count]) => count)
 
-      // Color palette - Palette moderne et vibrant
+      // Color palette - Professionnelle et Harmonnieuse
       const colors = [
-        { bg: 'rgba(59, 130, 246, 0.85)', border: 'rgb(37, 99, 235)' },      // Bleu
-        { bg: 'rgba(34, 197, 94, 0.85)', border: 'rgb(22, 163, 74)' },       // Vert
-        { bg: 'rgba(249, 115, 22, 0.85)', border: 'rgb(234, 88, 12)' },      // Orange
-        { bg: 'rgba(168, 85, 247, 0.85)', border: 'rgb(147, 51, 234)' },     // Violet
-        { bg: 'rgba(236, 72, 153, 0.85)', border: 'rgb(219, 39, 119)' },     // Rose
-        { bg: 'rgba(14, 165, 233, 0.85)', border: 'rgb(6, 182, 212)' },      // Cyan
-        { bg: 'rgba(244, 63, 94, 0.85)', border: 'rgb(239, 68, 68)' },       // Rouge
-        { bg: 'rgba(251, 146, 60, 0.85)', border: 'rgb(249, 115, 22)' },     // Ambre
+        '#3b82f6', // Blue 500
+        '#10b981', // Emerald 500
+        '#8b5cf6', // Violet 500
+        '#f59e0b', // Amber 500
+        '#ec4899', // Pink 500
+        '#06b6d4', // Cyan 500
+        '#64748b', // Slate 500
+        '#ef4444', // Red 500
       ]
 
-      const backgroundColors = data.map((_, i) => colors[i % colors.length].bg)
-      const borderColors = data.map((_, i) => colors[i % colors.length].border)
+      const dimmedColors = colors.map(c => c + 'CC') // Légère transparence
 
       setChartData({
         labels,
@@ -98,11 +99,10 @@ export default function ProductCategoriesChart() {
           {
             label: 'Nombre de produits',
             data,
-            backgroundColor: backgroundColors,
-            borderColor: borderColors,
-            borderWidth: 2.5,
-            hoverBorderWidth: 3,
-            hoverOffset: 8,
+            backgroundColor: colors,
+            borderColor: '#ffffff',
+            borderWidth: 2,
+            hoverOffset: 4,
           },
         ],
       })

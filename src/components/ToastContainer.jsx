@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Info, X, AlertTriangle } from 'lucide-react'
 
 import { playAlertSound } from '../lib/sound'
 import { useSettings } from '../lib/settingsStore'
@@ -19,10 +19,13 @@ export default function ToastContainer() {
 
       // Only show visual toast if notifications are enabled
       if (settings.notificationsEnabled) {
-        setToasts(prev => [...prev, t])
+        // Add ID if missing
+        const newToast = { ...t, id: t.id || Date.now() + Math.random() }
+
+        setToasts(prev => [...prev, newToast])
         if (t.duration && t.duration > 0) {
           setTimeout(() => {
-            setToasts(prev => prev.filter(x => x.id !== t.id))
+            setToasts(prev => prev.filter(x => x.id !== newToast.id))
           }, t.duration)
         }
       }
@@ -47,27 +50,35 @@ export default function ToastContainer() {
   const getToastStyles = (type) => {
     const baseStyles = {
       success: {
-        bg: '#10b981',
-        border: '#059669',
-        text: '#ffffff',
+        bg: 'bg-white',
+        border: 'border-emerald-100',
+        text: 'text-slate-800',
+        iconColor: 'text-emerald-500',
+        ring: 'ring-emerald-500/10',
         icon: CheckCircle2
       },
       error: {
-        bg: '#ef4444',
-        border: '#dc2626',
-        text: '#ffffff',
+        bg: 'bg-white',
+        border: 'border-red-100',
+        text: 'text-slate-800',
+        iconColor: 'text-red-500',
+        ring: 'ring-red-500/10',
         icon: AlertCircle
       },
       warn: {
-        bg: '#f59e0b',
-        border: '#d97706',
-        text: '#ffffff',
-        icon: AlertCircle
+        bg: 'bg-white',
+        border: 'border-amber-100',
+        text: 'text-slate-800',
+        iconColor: 'text-amber-500',
+        ring: 'ring-amber-500/10',
+        icon: AlertTriangle
       },
       info: {
-        bg: '#3b82f6',
-        border: '#2563eb',
-        text: '#ffffff',
+        bg: 'bg-white',
+        border: 'border-blue-100',
+        text: 'text-slate-800',
+        iconColor: 'text-blue-500',
+        ring: 'ring-blue-500/10',
         icon: Info
       }
     }
@@ -77,7 +88,7 @@ export default function ToastContainer() {
   if (!toasts || toasts.length === 0) return null
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-[calc(100vw-2rem)] sm:max-w-sm pointer-events-none">
+    <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-[400px] z-[9999] flex flex-col gap-3 pointer-events-none">
       {toasts.map(t => {
         const style = getToastStyles(t.type)
         const Icon = style.icon
@@ -85,22 +96,22 @@ export default function ToastContainer() {
         return (
           <div
             key={t.id}
-            className="pointer-events-auto animate-slide-in-right flex items-start gap-2 p-3 rounded-lg shadow-lg backdrop-blur-sm"
-            style={{
-              backgroundColor: style.bg,
-              borderLeft: `4px solid ${style.border}`,
-              color: style.text,
-              minWidth: '200px',
-              maxWidth: '100%'
-            }}
+            className={`pointer-events-auto flex items-start gap-4 p-4 rounded-2xl shadow-xl shadow-slate-200/50 border ${style.bg} ${style.border} animate-in slide-in-from-top-4 fade-in duration-300 ring-1 ${style.ring}`}
           >
-            <Icon className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium leading-tight break-words">{t.message}</div>
+            <div className={`p-2 rounded-full ${style.iconColor} bg-current/10 shrink-0`}>
+              <Icon className="w-5 h-5" strokeWidth={2.5} />
             </div>
+
+            <div className="flex-1 min-w-0 pt-1">
+              {t.title && <h4 className="font-semibold text-sm mb-0.5">{t.title}</h4>}
+              <p className={`text-sm font-medium leading-snug break-words ${t.title ? 'text-slate-500' : 'text-slate-700'}`}>
+                {t.message}
+              </p>
+            </div>
+
             <button
               onClick={() => removeToast(t.id)}
-              className="flex-shrink-0 ml-2 hover:opacity-70 transition-opacity"
+              className="flex-shrink-0 -mr-1 -mt-1 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
               aria-label="Fermer"
             >
               <X className="w-4 h-4" />

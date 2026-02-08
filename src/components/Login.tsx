@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { login, getCurrentUser } from '../lib/authStore';
 import { User } from '../types/User';
-import { AlertCircle, Lock, User as UserIcon, Loader2, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Lock, User as UserIcon, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
   onLogin?: (user: User) => void;
@@ -11,6 +11,7 @@ interface LoginProps {
 export default function Login({ onLogin, onBack }: LoginProps) {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -101,14 +102,23 @@ export default function Login({ onLogin, onBack }: LoginProps) {
                     <Lock size={18} />
                   </div>
                   <input
-                    type="password"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder-slate-400 text-slate-900"
+                    type={showPassword ? 'text' : 'password'}
+                    className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder-slate-400 text-slate-900"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     autoComplete="current-password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer outline-none"
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>
 

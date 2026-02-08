@@ -50,15 +50,15 @@ const options = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      borderColor: 'rgb(8, 255, 28)',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: 'rgba(226, 232, 240, 0.8)',
       borderWidth: 1,
-      padding: window.innerWidth < 640 ? 10 : 14,
-      titleFont: { size: 12, weight: 'bold', family: 'Inter, sans-serif' },
-      bodyFont: { size: 11, family: 'Inter, sans-serif' },
+      padding: 12,
+      titleFont: { size: 13, weight: '600', family: 'Outfit, sans-serif' },
+      bodyFont: { size: 12, family: 'Inter, sans-serif' },
       displayColors: false,
-      titleColor: '#f0f9ff',
-      bodyColor: '#bfdbfe',
+      titleColor: '#1e293b',
+      bodyColor: '#475569',
       callbacks: {
         label: (context) => ` ${context.parsed.y.toLocaleString('fr-FR')} Ar`
       }
@@ -68,24 +68,29 @@ const options = {
     y: {
       beginAtZero: true,
       grid: {
-        color: 'rgba(233, 233, 233, 0.08)',
+        color: 'rgba(0, 0, 0, 0.04)',
         drawBorder: false,
-        lineWidth: 1
+        tickColor: 'transparent'
       },
       ticks: {
-        font: { size: window.innerWidth < 640 ? 10 : 11, family: 'Inter, sans-serif', weight: '500' },
+        font: { size: 11, family: 'Inter, sans-serif' },
         color: '#64748b',
+        padding: 10,
         callback: (value) => value.toLocaleString('fr-FR')
-      }
+      },
+      border: { display: false }
     },
     x: {
       grid: { display: false, drawBorder: false },
       ticks: {
-        font: { size: window.innerWidth < 640 ? 9 : 10, family: 'Inter, sans-serif', weight: '500' },
-        color: '#64748b',
-        maxRotation: 45,
-        minRotation: 0
-      }
+        font: { size: 10, family: 'Inter, sans-serif' },
+        color: '#94a3b8',
+        maxRotation: 0,
+        minRotation: 0,
+        autoSkip: true,
+        maxTicksLimit: 7
+      },
+      border: { display: false }
     }
   }
 }
@@ -103,7 +108,7 @@ export default function SalesDailyChart() {
     let mounted = true
 
     const compute = (sales) => {
-      const days = lastNDays(15)
+      const days = lastNDays(14)
       const map = new Map(days.map(d => [d.key, 0]))
 
       sales.forEach(s => {
@@ -130,29 +135,12 @@ export default function SalesDailyChart() {
       })
 
       const chart = chartRef.current
-      if (!chart) {
-        setChartData({
-          labels: days.map(d => d.label),
-          datasets: [{
-            label: 'Ventes du jour',
-            data: days.map(d => map.get(d.key) || 0),
-            backgroundColor: 'rgba(187, 201, 183, 0.3)',
-            borderColor: '#2563eb',
-            borderWidth: 0,
-            borderRadius: 6,
-            borderSkipped: false,
-            hoverBackgroundColor: 'rgba(59, 130, 246, 0.8)',
-            hoverBorderColor: '#1d4ed8',
-            hoverBorderWidth: 1,
-          }]
-        })
-        return
-      }
+      if (!chart) return
 
-      // Création du dégradé si le canvas existe
-      const gradient = chart.ctx.createLinearGradient(0, 0, 0, 400)
-      gradient.addColorStop(0, 'rgba(0, 0, 128, 0.6)')
-      gradient.addColorStop(1, 'rgb(23, 98, 218)')
+      // Dégradé pour les barres
+      const gradient = chart.ctx.createLinearGradient(0, 0, 0, 300)
+      gradient.addColorStop(0, '#0ea5e9') // Sky 500
+      gradient.addColorStop(1, '#38bdf8') // Sky 400
 
       setChartData({
         labels: days.map(d => d.label),
@@ -160,14 +148,10 @@ export default function SalesDailyChart() {
           label: 'Ventes du jour',
           data: days.map(d => map.get(d.key) || 0),
           backgroundColor: gradient,
-          // Couleur de la ligne opaque
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 0,
-          borderRadius: 6,
-          borderSkipped: false,
-          hoverBackgroundColor: 'rgba(59, 130, 246, 0.8)',
-          hoverBorderColor: '#1d4ed8',
-          hoverBorderWidth: 1,
+          hoverBackgroundColor: '#0284c7', // Sky 600
+          borderRadius: 4,
+          barThickness: 'flex',
+          maxBarThickness: 32,
         }]
       })
     }

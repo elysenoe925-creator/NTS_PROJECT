@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react'
 import {
   Chart as ChartJS,
@@ -9,17 +8,16 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler, // Requis pour le remplissage sous la courbe
+  Filler,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import { TrendingUp, TrendingDown } from 'lucide-react'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
-
 import { getSales, subscribe, refreshSales } from '../lib/salesStore'
 import { useStore } from '../lib/StoreContext'
 
-// --- Helpers de date restants identiques ---
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+
+// --- Helpers de date ---
 function monthKey(date) {
   const d = new Date(date)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -38,7 +36,7 @@ function lastNMonths(n = 6) {
   return res
 }
 
-// --- Options de Design Améliorées ---
+// --- Options de Design ---
 const options = {
   responsive: true,
   maintainAspectRatio: false,
@@ -47,44 +45,56 @@ const options = {
     intersect: false,
   },
   plugins: {
-    legend: { display: false },
+    legend: {
+      display: true, // Afficher la légende pour distinguer les magasins
+      labels: {
+        usePointStyle: true,
+        font: { family: 'Inter, sans-serif', size: 12 },
+        color: '#64748b'
+      },
+      align: 'end'
+    },
     tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      borderColor: 'rgba(59, 246, 184, 0.5)',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: 'rgba(226, 232, 240, 0.8)',
       borderWidth: 1,
-      padding: window.innerWidth < 640 ? 10 : 14,
-      titleFont: { size: 12, weight: 'thin', family: 'Inter, sans-serif' },
-      bodyFont: { size: 11, family: 'Inter, sans-serif' },
-      displayColors: false,
-      titleColor: '#f0fdfa',
-      bodyColor: '#d1fae5',
+      padding: 12,
+      titleFont: { size: 13, weight: '600', family: 'Outfit, sans-serif' },
+      bodyFont: { size: 12, family: 'Inter, sans-serif' },
+      displayColors: true,
+      titleColor: '#1e293b',
+      bodyColor: '#475569',
       callbacks: {
-        label: (context) => ` ${context.parsed.y.toLocaleString('fr-FR')} Ar`
-      }
+        label: (context) => ` ${context.dataset.label}: ${context.parsed.y.toLocaleString('fr-FR')} Ar`
+      },
+      boxPadding: 4,
+      usePointStyle: true
     },
   },
   scales: {
     y: {
       beginAtZero: true,
       grid: {
-        color: 'rgba(255, 255, 255, 0.08)',
+        color: 'rgba(0, 0, 0, 0.04)',
         drawBorder: false,
-        lineWidth: 1
+        tickColor: 'transparent'
       },
       ticks: {
-        font: { size: window.innerWidth < 640 ? 10 : 11, family: 'Inter, sans-serif' },
+        font: { size: 11, family: 'Inter, sans-serif' },
         color: '#64748b',
+        padding: 10,
         callback: (value) => value.toLocaleString('fr-FR')
-      }
+      },
+      border: { display: false }
     },
     x: {
       grid: { display: false, drawBorder: false },
       ticks: {
-        font: { size: window.innerWidth < 640 ? 10 : 11, family: 'Inter, sans-serif' },
+        font: { size: 11, family: 'Inter, sans-serif' },
         color: '#64748b',
-        maxRotation: 45,
-        minRotation: 0
-      }
+        padding: 5
+      },
+      border: { display: false }
     }
   }
 }
@@ -102,55 +112,135 @@ export default function SalesChart() {
     let mounted = true
 
     const compute = (sales) => {
-      const months = lastNMonths(3)
-      const map = new Map(months.map(m => [m.key, 0]))
+      const months = lastNMonths(6)
 
-      sales.forEach(s => {
-        const k = monthKey(s.date)
-        if (map.has(k)) map.set(k, map.get(k) + (Number(s.total) || 0))
-      })
+      // Si vue globale, on sépare les deux magasins
+      if (currentStore === 'all') {
+        const map1 = new Map(months.map(m => [m.key, 0])) // Shop 1 (Majunga)
+        const map2 = new Map(months.map(m => [m.key, 0])) // Shop 2 (Tamatave)
 
-      // Calcul de la variation (dernier mois vs mois précédent)
-      const lastMonthTotal = map.get(months[months.length - 1]?.key) || 0
-      const prevMonthTotal = map.get(months[months.length - 2]?.key) || 0
-      let percentage = 0
-      if (prevMonthTotal > 0) {
-        percentage = ((lastMonthTotal - prevMonthTotal) / prevMonthTotal) * 100
+        sales.forEach(s => {
+          const k = monthKey(s.date)
+          const amount = Number(s.total) || 0
+
+          if (s.store === 'majunga') map1.set(k, map1.get(k) + amount)
+          else if (s.store === 'tamatave') map2.set(k, map2.get(k) + amount)
+        })
+
+        // Calcul variation globale (somme des deux)
+        const lastKey = months[months.length - 1]?.key
+        const prevKey = months[months.length - 2]?.key
+
+        const lastTotal = (map1.get(lastKey) || 0) + (map2.get(lastKey) || 0)
+        const prevTotal = (map1.get(prevKey) || 0) + (map2.get(prevKey) || 0)
+
+        let percentage = 0
+        if (prevTotal > 0) {
+          percentage = ((lastTotal - prevTotal) / prevTotal) * 100
+        }
+        setVariation({
+          percentage: Math.abs(percentage),
+          isPositive: lastTotal >= prevTotal,
+          yesterdayTotal: prevTotal,
+          todayTotal: lastTotal
+        })
+
+        const chart = chartRef.current
+
+        let bg1 = 'rgba(99, 102, 241, 0.2)'
+        let bg2 = 'rgba(16, 185, 129, 0.2)'
+
+        if (chart) {
+          const grad1 = chart.ctx.createLinearGradient(0, 0, 0, 300)
+          grad1.addColorStop(0, 'rgba(99, 102, 241, 0.2)') // Indigo
+          grad1.addColorStop(1, 'rgba(99, 102, 241, 0)')
+          bg1 = grad1
+
+          const grad2 = chart.ctx.createLinearGradient(0, 0, 0, 300)
+          grad2.addColorStop(0, 'rgba(16, 185, 129, 0.2)') // Emerald
+          grad2.addColorStop(1, 'rgba(16, 185, 129, 0)')
+          bg2 = grad2
+        }
+
+        setChartData({
+          labels: months.map(m => m.label),
+          datasets: [
+            {
+              fill: true,
+              label: "Majunga",
+              data: months.map(m => map1.get(m.key) || 0),
+              borderColor: '#6366f1', // Indigo 500
+              backgroundColor: bg1,
+              tension: 0.35,
+              pointRadius: 0,
+              pointHoverRadius: 6,
+              pointBackgroundColor: '#6366f1',
+              borderWidth: 2,
+            },
+            {
+              fill: true,
+              label: "Tamatave",
+              data: months.map(m => map2.get(m.key) || 0),
+              borderColor: '#10b981', // Emerald 500
+              backgroundColor: bg2,
+              tension: 0.35,
+              pointRadius: 0,
+              pointHoverRadius: 6,
+              pointBackgroundColor: '#10b981',
+              borderWidth: 2,
+            }
+          ]
+        })
+
+      } else {
+        // Vue magasin unique
+        const map = new Map(months.map(m => [m.key, 0]))
+
+        sales.forEach(s => {
+          const k = monthKey(s.date)
+          if (map.has(k)) map.set(k, map.get(k) + (Number(s.total) || 0))
+        })
+
+        // Calcul de la variation
+        const lastMonthTotal = map.get(months[months.length - 1]?.key) || 0
+        const prevMonthTotal = map.get(months[months.length - 2]?.key) || 0
+        let percentage = 0
+        if (prevMonthTotal > 0) {
+          percentage = ((lastMonthTotal - prevMonthTotal) / prevMonthTotal) * 100
+        }
+        setVariation({
+          percentage: Math.abs(percentage),
+          isPositive: lastMonthTotal >= prevMonthTotal,
+          yesterdayTotal: prevMonthTotal,
+          todayTotal: lastMonthTotal
+        })
+
+        const chart = chartRef.current
+        let bg = 'rgba(99, 102, 241, 0.2)'
+
+        if (chart) {
+          const gradient = chart.ctx.createLinearGradient(0, 0, 0, 300)
+          gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)')
+          gradient.addColorStop(1, 'rgba(99, 102, 241, 0)')
+          bg = gradient
+        }
+
+        setChartData({
+          labels: months.map(m => m.label),
+          datasets: [{
+            fill: true,
+            label: "Chiffre d'affaires",
+            data: months.map(m => map.get(m.key) || 0),
+            borderColor: '#6366f1',
+            backgroundColor: bg,
+            tension: 0.35,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#6366f1',
+            borderWidth: 2,
+          }]
+        })
       }
-      setVariation({
-        percentage: Math.abs(percentage),
-        isPositive: lastMonthTotal >= prevMonthTotal,
-        yesterdayTotal: prevMonthTotal,
-        todayTotal: lastMonthTotal
-      })
-
-      const chart = chartRef.current
-      if (!chart) return
-
-      // Création du dégradé avec des couleurs plus modernes
-      const gradient = chart.ctx.createLinearGradient(0, 0, 0, 400)
-      gradient.addColorStop(0, 'rgba(34, 197, 94, 0.25)') // Vert lumineux
-      gradient.addColorStop(0.5, 'rgba(34, 197, 94, 0.1)')
-      gradient.addColorStop(1, 'rgba(34, 197, 94, 0)')
-
-      setChartData({
-        labels: months.map(m => m.label),
-        datasets: [{
-          fill: true,
-          label: "Chiffre d'affaires",
-          data: months.map(m => map.get(m.key) || 0),
-          borderColor: '#16a34a', // Vert principal (Green 600)
-          backgroundColor: gradient,
-          tension: 0.4,
-          pointRadius: 5,
-          pointBackgroundColor: '#fff',
-          pointBorderColor: '#16a34a',
-          pointBorderWidth: 2,
-          pointHoverRadius: 7,
-          pointHoverBackgroundColor: '#22c55e',
-          borderWidth: 2.5,
-        }]
-      })
     }
 
     refreshSales(currentStore).finally(() => {
@@ -184,7 +274,7 @@ export default function SalesChart() {
           <div>Dernier: {variation.todayTotal.toLocaleString('fr-FR')} Ar</div>
         </div>
       </div>
-      <div className="modern-chart-container  " style={{ width: '100%', position: 'relative' }}>
+      <div className="modern-chart-container" style={{ width: '100%', height: '300px', position: 'relative' }}>
         <Line ref={chartRef} options={options} data={chartData} />
       </div>
     </div>
