@@ -146,9 +146,9 @@ export default function Topbar() {
         {/* Right Section - User Info */}
         <div className="topbar-section topbar-right">
           <div className="user-info">
-            <div className="user-details">
-              <div className="user-name">{user ? user.displayName : 'Invité'}</div>
-              <div className="user-role">{user ? `${user.role} • ${user.store}` : 'Non connecté'}</div>
+            <div className="user-details flex flex-col justify-center">
+              <div className="user-name truncate max-w-[80px] sm:max-w-[150px]">{user ? user.displayName : 'Invité'}</div>
+              <div className="user-role hidden sm:block">{user ? `${user.role} • ${user.store}` : 'Non connecté'}</div>
             </div>
 
             {user && user.role === 'admin' && (

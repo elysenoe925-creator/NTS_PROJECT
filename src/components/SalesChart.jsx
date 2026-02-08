@@ -40,27 +40,36 @@ function lastNMonths(n = 6) {
 const options = {
   responsive: true,
   maintainAspectRatio: false,
+  padding: {
+    top: 5,
+    bottom: 5,
+    left: 5,
+    right: 5
+  },
   interaction: {
     mode: 'index',
     intersect: false,
   },
   plugins: {
     legend: {
-      display: true, // Afficher la légende pour distinguer les magasins
+      display: true,
+      position: window.innerWidth < 640 ? 'bottom' : 'right',
+      align: 'center',
       labels: {
         usePointStyle: true,
-        font: { family: 'Inter, sans-serif', size: 12 },
-        color: '#64748b'
-      },
-      align: 'end'
+        boxWidth: 8,
+        font: { family: 'Inter, sans-serif', size: window.innerWidth < 640 ? 10 : 12 },
+        color: '#64748b',
+        padding: window.innerWidth < 640 ? 10 : 20
+      }
     },
     tooltip: {
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
       borderColor: 'rgba(226, 232, 240, 0.8)',
       borderWidth: 1,
-      padding: 12,
-      titleFont: { size: 13, weight: '600', family: 'Outfit, sans-serif' },
-      bodyFont: { size: 12, family: 'Inter, sans-serif' },
+      padding: window.innerWidth < 640 ? 8 : 12,
+      titleFont: { size: 12, weight: '600', family: 'Outfit, sans-serif' },
+      bodyFont: { size: 11, family: 'Inter, sans-serif' },
       displayColors: true,
       titleColor: '#1e293b',
       bodyColor: '#475569',
@@ -80,19 +89,23 @@ const options = {
         tickColor: 'transparent'
       },
       ticks: {
-        font: { size: 11, family: 'Inter, sans-serif' },
-        color: '#64748b',
-        padding: 10,
-        callback: (value) => value.toLocaleString('fr-FR')
+        display: window.innerWidth > 480, // Hide Y axis on very small screens to save space
+        font: { size: 10, family: 'Inter, sans-serif' },
+        color: '#94a3b8',
+        padding: 8,
+        callback: (value) => value >= 1000000 ? (value / 1000000).toFixed(1) + 'M' : value.toLocaleString('fr-FR')
       },
       border: { display: false }
     },
     x: {
       grid: { display: false, drawBorder: false },
       ticks: {
-        font: { size: 11, family: 'Inter, sans-serif' },
-        color: '#64748b',
-        padding: 5
+        font: { size: 10, family: 'Inter, sans-serif' },
+        color: '#94a3b8',
+        padding: 5,
+        maxRotation: 0,
+        autoSkip: true,
+        maxTicksLimit: 6
       },
       border: { display: false }
     }

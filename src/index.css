@@ -3,9 +3,7 @@
 @tailwind utilities;
 
 /* Import modern fonts */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
-
-*/
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 /* Tailwind enabled - custom rules follow */
 * {
@@ -680,6 +678,41 @@ textarea {
   max-width: 100%;
 }
 
+@media (max-width: 640px) {
+  .topbar-container {
+    padding: 8px 12px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .topbar-section {
+    gap: 8px;
+  }
+
+  .store-selector {
+    padding: 2px;
+    gap: 2px;
+    border-radius: 10px;
+  }
+
+  .store-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    min-height: 30px;
+    border-radius: 8px;
+  }
+
+  .store-indicator {
+    width: 4px;
+    height: 4px;
+  }
+
+  .user-info {
+    padding-left: 8px;
+    gap: 8px;
+  }
+}
+
 /* Topbar Sections */
 .topbar-section {
   display: flex;
@@ -989,6 +1022,7 @@ textarea {
 }
 
 /* KPI Cards Redesign */
+/* --- Unified Modern KPI System --- */
 .kpi-grid-stock,
 .kpi-grid-sales {
   display: grid;
@@ -998,20 +1032,24 @@ textarea {
 }
 
 .kpi-card {
-  background: #ffffff;
+  background: white;
   border-radius: 16px;
-  padding: 24px;
+  padding: 20px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(0, 0, 0, 0.04);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  height: min-content;
 }
 
 .kpi-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+  border-color: rgba(79, 70, 229, 0.1);
 }
 
 .kpi-icon-wrapper {
@@ -1025,43 +1063,92 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.kpi-card:hover .kpi-icon {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+.kpi-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.kpi-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 2px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+.kpi-metric {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e293b;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  letter-spacing: -0.02em;
+}
+
+.kpi-unit {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: lowercase;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Colors and Gradients */
+.kpi-blue .kpi-icon {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.kpi-violet .kpi-icon {
+  background: #f5f3ff;
+  color: #8b5cf6;
+}
+
+.kpi-emerald .kpi-icon {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.kpi-amber .kpi-icon {
+  background: #fffbeb;
+  color: #f59e0b;
+}
+
+.kpi-rose .kpi-icon {
+  background: #fff1f2;
+  color: #f43f5e;
+}
+
+.kpi-sky .kpi-icon {
+  background: #f0f9ff;
+  color: #0ea5e9;
+}
+
+/* Special Alert State for Low Stock */
+.kpi-card.alert-active {
+  background: #f43f5e;
+  border-color: #f43f5e;
+}
+
+.kpi-card.alert-active .kpi-label,
+.kpi-card.alert-active .kpi-metric,
+.kpi-card.alert-active .kpi-unit {
   color: white;
 }
 
-.kpi-icon svg {
-  width: 24px;
-  height: 24px;
-}
-
-/* Specific colors for icons */
-.products-icon {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-}
-
-.quantity-icon {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
-}
-
-.value-icon {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-}
-
-.lowstock-icon {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-}
-
-.revenue-icon {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
-}
-
-.sold-icon {
-  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-  box-shadow: 0 4px 12px rgba(244, 63, 94, 0.2);
+.kpi-card.alert-active .kpi-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
 .orders-icon {
@@ -3943,76 +4030,7 @@ div[style*="height"]>div[style*="position"] canvas {
 
 /* KPI Cards avec meilleur style */
 
-.kpi-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-radius: 10px;
-  padding: 18px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06),
-    0 1px 4px rgba(0, 0, 0, 0.03);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: start;
-  height: 150px;
-  justify-content: space-between;
-  position: relative;
-  font-family: inter;
-  overflow: hidden;
-
-
-
-}
-
-.kpi-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.8);
-  pointer-events: none;
-}
-
-.kpi-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1),
-    0 4px 8px rgba(0, 0, 0, 0.05);
-}
-
-
-
-.kpi-header {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  justify-content: start;
-  gap: 32px;
-  margin-bottom: 12px;
-  width: 25%;
-}
-
-.kpi-icon {
-  width: 70px;
-  height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  font-weight: 00;
-  transition: all 0.3s ease;
-  box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
-
-}
-
-.kpi-revenue .kpi-icon {
-  color: rgb(250, 250, 250);
-  background-color: #10b981;
-}
-
-.kpi-sold .kpi-icon {
-  color: rgb(250, 250, 250);
-  background-color: #f59e0b;
-}
+/* Removed redundant kpi-card definitions */
 
 .kpi-orders .kpi-icon {
   color: rgb(250, 250, 250);

@@ -15,15 +15,15 @@ const options = {
   responsive: true,
   maintainAspectRatio: false,
   layout: {
-    padding: 20
+    padding: window.innerWidth < 640 ? 5 : 15
   },
   plugins: {
     legend: {
-      position: 'right',
+      position: window.innerWidth < 768 ? 'bottom' : 'right',
       labels: {
-        font: { size: 12, family: 'Inter, sans-serif' },
-        padding: 20,
-        boxWidth: 12,
+        font: { size: window.innerWidth < 640 ? 10 : 12, family: 'Inter, sans-serif' },
+        padding: window.innerWidth < 640 ? 10 : 20,
+        boxWidth: window.innerWidth < 640 ? 8 : 12,
         usePointStyle: true,
         pointStyle: 'circle',
         color: '#64748b',
@@ -33,9 +33,9 @@ const options = {
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
       borderColor: 'rgba(226, 232, 240, 0.8)',
       borderWidth: 1,
-      padding: 12,
-      titleFont: { size: 13, weight: '600', family: 'Outfit, sans-serif' },
-      bodyFont: { size: 12, family: 'Inter, sans-serif' },
+      padding: 10,
+      titleFont: { size: 12, weight: '600', family: 'Outfit, sans-serif' },
+      bodyFont: { size: 11, family: 'Inter, sans-serif' },
       titleColor: '#1e293b',
       bodyColor: '#475569',
       callbacks: {
