@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import Dashboard from './components/Dashboard'
 import Login from './components/Login'
+import Landing from './components/Landing'
 import { useAuth } from './lib/AuthContext'
 import { initSocket, closeSocket } from './lib/socketService'
 import '@fontsource/roboto/300.css'
@@ -10,6 +11,8 @@ import { useSettings } from './lib/settingsStore'
 export default function App() {
   const { user, isLoading } = useAuth()
   const { settings } = useSettings()
+  // view: 'landing' or 'login'
+  const [view, setView] = React.useState('landing')
 
   useEffect(() => {
     // Apply theme
@@ -39,5 +42,16 @@ export default function App() {
     )
   }
 
-  return user ? <Dashboard /> : <Login />
+  // If user is logged in, show Dashboard
+  if (user) {
+    return <Dashboard />
+  }
+
+  // Otherwise handle navigation
+  if (view === 'login') {
+    return <Login onBack={() => setView('landing')} />
+  }
+
+  // Default to Landing page
+  return <Landing onLoginClick={() => setView('login')} />
 }

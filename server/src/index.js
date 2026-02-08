@@ -58,6 +58,25 @@ app.use(cors(corsOptions))
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
+// Helper: Format product for client
+function formatProductForClient(p) {
+  const stockByStore = (p.stocks || []).reduce((acc, s) => { acc[s.store] = s.qty; return acc }, {})
+  return {
+    id: p.id,
+    sku: p.sku,
+    name: p.name,
+    model: p.model,
+    compatibleModels: p.compatibleModels ? p.compatibleModels.split(',') : [],
+    price: p.price,
+    cost: p.cost,
+    location: p.location,
+    category: p.category,
+    supplier: p.supplier,
+    stockByStore,
+    alertThreshold: p.alertThreshold
+  }
+}
+
 // Simple auth - returns JWT
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body
