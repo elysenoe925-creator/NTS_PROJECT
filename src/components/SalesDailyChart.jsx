@@ -79,7 +79,7 @@ const options = {
         tickColor: 'transparent'
       },
       ticks: {
-        display: window.innerWidth > 480,
+        display: true,
         font: { size: 10, family: 'Inter, sans-serif' },
         color: '#94a3b8',
         padding: 8,

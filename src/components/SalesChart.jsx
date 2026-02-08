@@ -89,7 +89,7 @@ const options = {
         tickColor: 'transparent'
       },
       ticks: {
-        display: window.innerWidth > 480, // Hide Y axis on very small screens to save space
+        display: true, // Always show Y axis for better visibility
         font: { size: 10, family: 'Inter, sans-serif' },
         color: '#94a3b8',
         padding: 8,
