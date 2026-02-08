@@ -14,35 +14,24 @@ export default function NotificationBadge({ section, className = '' }) {
   useEffect(() => {
     if (!isAdmin) return
 
-    // Subscribe to action log updates
     const unsubscribe = subscribeActionLogs((logs) => {
-      // Filter notifications based on section and recent actions
       const relevantNotifications = logs
         .filter(log => {
-          // Only show notifications from the last 24 hours
           const logTime = new Date(log.timestamp)
           const now = new Date()
           const hoursDiff = (now - logTime) / (1000 * 60 * 60)
           if (hoursDiff > 24) return false
 
-          // Filter by section
           switch (section) {
-            case 'sales':
-              return log.action === 'VENTE'
-            case 'stock':
-              return ['CREATION_PRODUIT', 'MODIFICATION_PRODUIT', 'SUPPRESSION_PRODUIT', 'REAPPROVISIONNEMENT'].includes(log.action)
-            case 'orders':
-              return ['CREATION_COMMANDE', 'MODIFICATION_COMMANDE', 'ANNULATION_COMMANDE'].includes(log.action)
-            case 'tracking':
-              return true // Show all actions in tracking section
-            case 'global':
-              // Show all relevant actions for global notifications
-              return ['VENTE', 'CREATION_PRODUIT', 'MODIFICATION_PRODUIT', 'SUPPRESSION_PRODUIT', 'REAPPROVISIONNEMENT', 'CREATION_COMMANDE', 'MODIFICATION_COMMANDE', 'ANNULATION_COMMANDE'].includes(log.action)
-            default:
-              return false
+            case 'sales': return log.action === 'VENTE'
+            case 'stock': return ['CREATION_PRODUIT', 'MODIFICATION_PRODUIT', 'SUPPRESSION_PRODUIT', 'REAPPROVISIONNEMENT'].includes(log.action)
+            case 'orders': return ['CREATION_COMMANDE', 'MODIFICATION_COMMANDE', 'ANNULATION_COMMANDE'].includes(log.action)
+            case 'tracking': return true
+            case 'global': return ['VENTE', 'CREATION_PRODUIT', 'MODIFICATION_PRODUIT', 'SUPPRESSION_PRODUIT', 'REAPPROVISIONNEMENT', 'CREATION_COMMANDE', 'MODIFICATION_COMMANDE', 'ANNULATION_COMMANDE'].includes(log.action)
+            default: return false
           }
         })
-        .slice(0, 10) // Limit to 10 most recent notifications
+        .slice(0, 10)
 
       setNotifications(relevantNotifications)
     })
@@ -63,79 +52,84 @@ export default function NotificationBadge({ section, className = '' }) {
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`notif-badge-container ${className}`}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-        title={`${notifications.length} nouvelle${notifications.length > 1 ? 's' : ''} notification${notifications.length > 1 ? 's' : ''}`}
+        className="relative p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all transform active:scale-95"
+        title={`${notifications.length} notification${notifications.length > 1 ? 's' : ''}`}
       >
-        <Bell size={20} />
+        <Bell size={20} strokeWidth={2.5} />
         {notifications.length > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-bold ring-2 ring-white">
             {notifications.length > 9 ? '9+' : notifications.length}
           </span>
         )}
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 sm:right-0 sm:left-auto left-0">
-          <div className="p-3 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="font-semibold text-gray-900">
-              Notifications ({notifications.length})
-            </h3>
-            <button
-              onClick={clearAllNotifications}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              Tout effacer
-            </button>
-          </div>
+        <>
+          {/* Mobile Overlay backdrop */}
+          <div className="notif-dropdown-overlay" onClick={() => setShowDropdown(false)} />
 
-          <div className="max-h-96 overflow-y-auto">
-            {notifications.map((notification, index) => (
-              <div key={`${notification.id}-${index}`} className="p-3 border-b border-gray-100 hover:bg-gray-50">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-gray-900">
-                        {notification.user?.displayName || 'Utilisateur inconnu'}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(notification.timestamp).toLocaleTimeString('fr-FR', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+          <div className="notif-dropdown">
+            <div className="notif-header">
+              <h3 className="font-bold text-slate-900 text-sm">
+                Notifications ({notifications.length})
+              </h3>
+              <button
+                onClick={clearAllNotifications}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+              >
+                Tout effacer
+              </button>
+            </div>
+
+            <div className="notif-content">
+              {notifications.map((notification, index) => (
+                <div key={`${notification.id}-${index}`} className="notif-item">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-bold text-slate-800">
+                          {notification.user?.displayName || 'Système'}
+                        </span>
+                        <span className="text-[10px] font-medium text-slate-400">
+                          {new Date(notification.timestamp).toLocaleTimeString('fr-FR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {notification.description}
+                      </p>
+                      {notification.store && (
+                        <span className="inline-block mt-1.5 text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                          {notification.store}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-700 line-clamp-2">
-                      {notification.description}
-                    </p>
-                    {notification.store && (
-                      <span className="inline-block mt-1 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                        {notification.store}
-                      </span>
-                    )}
+                    <button
+                      onClick={() => clearNotification(index)}
+                      className="ml-2 text-slate-300 hover:text-slate-500 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => clearNotification(index)}
-                    className="ml-2 text-gray-400 hover:text-gray-600"
-                  >
-                    <X size={14} />
-                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div className="p-3 border-t border-gray-200">
-            <button
-              onClick={() => setShowDropdown(false)}
-              className="w-full text-center text-sm text-blue-600 hover:text-blue-800"
-            >
-              Fermer
-            </button>
+            <div className="notif-footer">
+              <button
+                onClick={() => setShowDropdown(false)}
+                className="w-full py-2 text-center text-xs font-bold text-slate-500 hover:text-slate-900"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )
