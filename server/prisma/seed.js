@@ -10,11 +10,9 @@ const prisma = new PrismaClient({
 })
 
 async function main() {
-  // Clear existing data (dev only)
-  await prisma.sale.deleteMany().catch(() => { })
-  await prisma.stock.deleteMany().catch(() => { })
-  // await prisma.product.deleteMany().catch(() => { }) // DEPRECATED: Use upsert instead
-  // await prisma.user.deleteMany().catch(()=>{}) // DO NOT DELETE USERS TO PRESERVE MANUAL CHANGES
+  // Clear existing data (Commented out for production safety)
+  // await prisma.sale.deleteMany().catch(() => { })
+  // await prisma.stock.deleteMany().catch(() => { })
 
   const adminPassword = await bcrypt.hash('admin123', 10)
   await prisma.user.upsert({
