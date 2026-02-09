@@ -227,12 +227,12 @@ export async function computeDecisions(options = {}) {
       try {
         const fullHistory = allSalesForAiMap.get(sku) || []
         // On prend un historique plus long pour l'entraînement (ex: 90 jours)
-        const dailySales = prepareDataForPrediction(fullHistory, 90)
+        const dailySales = prepareDataForPrediction(fullHistory, 180)
 
         // Prédiction sur la période de leadDays
         const result = await predictSales(dailySales, leadDays)
 
-        if (result.confidence > 0.5) { // Si confiance suffisante
+        if (result.confidence > 0.25) { // Si confiance suffisante
           const aiTotal = result.predictions.reduce((a, b) => a + b, 0)
           aiPrediction = {
             total: aiTotal,

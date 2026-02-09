@@ -87,20 +87,24 @@ def main():
         mean = np.mean(clean_history) if len(clean_history) > 0 else 1
         
         # Avoid division by zero and handle potential NaN
-        if mean == 0 or np.isnan(mean):
-            cv = 0 if variance == 0 else 1 # If mean is 0 but variance > 0, high volatility
+        if mean <= 0 or np.isnan(mean):
+            cv = 0 if variance == 0 else 2.0 # Volatility cap
         else:
-            cv = variance / mean
+            # CV = Standard Deviation / Mean
+            std_dev = np.sqrt(variance)
+            cv = std_dev / (mean + 0.1)
             
-        # Ensure CV is not NaN
-        if np.isnan(cv):
-            cv = 1.0
-            
-        confidence = max(0.1, min(0.95, 1.0 - (cv * 0.5)))
+        # Refined confidence formula: less drastic reduction for typical retail patterns
+        # 1.0 - (cv * 0.3) instead of 0.5 to be more permissive
+        confidence = max(0.15, min(0.98, 1.0 - (cv * 0.3)))
         
+        # Boost confidence slightly if we have more history
+        if len(clean_history) > 30:
+            confidence = min(0.98, confidence * 1.1)
+            
         # Final safety check for NaN
         if np.isnan(confidence):
-            confidence = 0.5
+            confidence = 0.4
         
         results[sku] = {
             "prediction": round(prediction, 2),
