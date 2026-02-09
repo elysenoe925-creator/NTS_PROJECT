@@ -7,8 +7,8 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "build": "npm run prisma:generate",
-    "prisma:generate": "npx prisma generate",
-    "prisma:migrate": "npx prisma migrate dev --name init",
+    "prisma:generate": "./node_modules/.bin/prisma generate",
+    "prisma:migrate": "./node_modules/.bin/prisma migrate deploy",
     "prisma:seed": "node prisma/seed.js",
     "reseed": "node scripts/reseed.js"
   },
