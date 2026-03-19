@@ -141,11 +141,7 @@ export default function Login({ onLogin, onBack }: LoginProps) {
             </form>
           </div>
 
-          <div className="px-8 py-4 bg-slate-50 border-t border-slate-100 text-center">
-            <p className="text-xs text-slate-500">
-              © {new Date().getFullYear()} NTSOA GSM • ERP System
-            </p>
-          </div>
+         
         </div>
       </div>
     </div>
