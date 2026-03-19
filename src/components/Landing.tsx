@@ -124,21 +124,7 @@ export default function Landing({ onLoginClick }: LandingProps) {
             </section>
 
             {/* Footer */}
-            <footer className="bg-slate-50 border-t border-slate-200 pt-16 pb-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
-                                <Smartphone className="text-white w-4 h-4" />
-                            </div>
-                            <span className="font-bold text-lg text-slate-900">NTSOA GSM</span>
-                        </div>
-                        <p className="text-slate-500 text-sm">
-                            © {new Date().getFullYear()} NTSOA GSM. Tous droits réservés.
-                        </p>
-                    </div>
-                </div>
-            </footer>
+            
         </div>
     );
 }
