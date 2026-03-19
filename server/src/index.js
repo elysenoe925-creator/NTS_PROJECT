@@ -1122,7 +1122,6 @@ app.post('/api/sales', auth, async (req, res) => {
       })
 
       return sale
-      return sale
     })
 
     // Optimized broadcasts
